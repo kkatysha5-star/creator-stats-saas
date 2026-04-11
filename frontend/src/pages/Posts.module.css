@@ -1,0 +1,78 @@
+.page { padding: 0 0 48px; }
+
+.toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 0 28px 20px;
+}
+.filterSelect {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); color: var(--text2);
+  font-family: var(--font); font-size: 12.5px; padding: 6px 10px; outline: none; cursor: pointer;
+}
+.filterSelect option { background: var(--bg2); }
+
+.list { display: flex; flex-direction: column; gap: 8px; padding: 0 28px; }
+
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; transition: border-color .15s;
+}
+.card:hover { border-color: var(--border2); }
+
+.cardHeader {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; cursor: pointer; user-select: none;
+}
+
+.cardLeft { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.num { font-family: var(--mono); font-size: 12px; color: var(--text3); min-width: 28px; }
+.cardInfo { display: flex; flex-direction: column; min-width: 0; }
+.cardTitle { font-size: 13.5px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cardMeta { font-size: 11px; color: var(--text3); margin-top: 1px; }
+
+.cardStats { display: flex; gap: 20px; flex-shrink: 0; }
+.stat { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.statLabel { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.4px; }
+.statVal { font-family: var(--mono); font-size: 13px; color: var(--text); font-weight: 500; }
+.accent { color: var(--accent) !important; }
+
+.cardActions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.chevron { font-size: 12px; color: var(--text3); margin-left: 4px; transition: transform .2s; display: inline-block; }
+
+.iconBtn {
+  width: 26px; height: 26px; border-radius: 5px; border: 1px solid var(--border);
+  background: transparent; color: var(--text3); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all .1s;
+}
+.iconBtn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+.del:hover { color: #ff5050 !important; border-color: rgba(255,80,80,.3) !important; }
+
+.breakdown {
+  border-top: 1px solid var(--border);
+  padding: 8px 14px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  animation: fadeIn .15s ease;
+}
+
+.platformRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  background: var(--bg3);
+}
+.vidLink {
+  flex: 1; font-size: 12px; color: var(--text2); text-decoration: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.vidLink:hover { color: var(--accent); }
+
+.platStats { display: flex; gap: 12px; flex-shrink: 0; }
+.platStat { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.platStatLabel { font-size: 10px; color: var(--text3); }
+.platStatVal { font-family: var(--mono); font-size: 12px; color: var(--text); }
+
+.addPlatBtn {
+  align-self: flex-start; background: transparent; border: 1px dashed var(--border2);
+  border-radius: var(--radius-sm); color: var(--text3); font-size: 12px;
+  padding: 5px 12px; cursor: pointer; margin-top: 2px; transition: all .15s;
+}
+.addPlatBtn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }

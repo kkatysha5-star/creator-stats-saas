@@ -1,0 +1,49 @@
+.page { padding: 0 0 48px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  padding: 0 28px;
+}
+
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.card:hover { border-color: var(--border2); }
+
+.cardTop { display: flex; align-items: center; gap: 12px; }
+.cardInfo { flex: 1; overflow: hidden; }
+.name { font-size: 14px; font-weight: 600; color: var(--text); }
+.username { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+.cardActions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.card:hover .cardActions { opacity: 1; }
+.iconBtn {
+  width: 26px; height: 26px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text3);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .1s;
+}
+.iconBtn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+.del:hover { color: #ff5050 !important; border-color: rgba(255,80,80,.3) !important; }
+
+.colorDot {
+  position: absolute;
+  bottom: -10px; right: -10px;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  opacity: 0.12;
+  pointer-events: none;
+}

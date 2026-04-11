@@ -1,0 +1,9 @@
+{
+  "name": "creator-stats",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node backend/server.js",
+    "build": "cd frontend && npm install && npm run build && cd ../backend && npm install"
+  }
+}
