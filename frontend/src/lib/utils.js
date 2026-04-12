@@ -1,6 +1,7 @@
 export function fmtNum(n) {
   if (n == null) return '—';
-  return n.toLocaleString('ru-RU');
+  // Используем тонкий пробел (U+202F) вместо неразрывного — он не растягивается
+  return n.toLocaleString('ru-RU').replace(/\u00A0/g, '\u202F');
 }
 
 export function fmtEr(er) {
