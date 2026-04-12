@@ -1,12 +1,41 @@
 .page { padding: 0 0 48px; }
 
+/* Тулбар с переключателем месяцев */
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
   flex-wrap: wrap;
   padding: 0 28px 20px;
 }
+
+.labelTabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.labelTab {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text3);
+  font-size: 13px;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all .15s;
+}
+.labelTab:hover { color: var(--text); background: var(--bg3); }
+.labelTabActive {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.compareWrap { display: flex; align-items: center; gap: 8px; }
+.compareLabel { font-size: 12px; color: var(--text3); white-space: nowrap; }
 
 .filterSelect {
   background: var(--bg2);
@@ -15,70 +44,107 @@
   color: var(--text2);
   font-family: var(--font);
   font-size: 12.5px;
-  padding: 6px 10px;
+  padding: 5px 10px;
   outline: none;
   cursor: pointer;
 }
 
-.toggleWrap { display: flex; }
-.toggleBtn {
-  padding: 5px 12px;
-  font-size: 12px;
-  background: transparent;
-  border: 1px solid var(--border2);
-  color: var(--text3);
-  cursor: pointer;
-  font-family: var(--font);
-  transition: all .15s;
+/* Таблица */
+.tableWrap {
+  margin: 0 28px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
 }
-.toggleBtn:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
-.toggleBtn:last-child  { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: none; }
-.toggleActive { background: var(--bg4); color: var(--text); font-weight: 500; }
 
-.content { padding: 0 28px; display: flex; flex-direction: column; gap: 32px; }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
 
-.creatorBlock { display: flex; flex-direction: column; gap: 12px; }
+.table thead { border-bottom: 1px solid var(--border2); }
 
-.creatorHeader {
+.thCreator {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  position: sticky;
+  left: 0;
+  background: var(--bg2);
+  min-width: 180px;
+  border-right: 1px solid var(--border);
+}
+
+.th {
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  text-align: right;
+  border-right: 1px solid var(--border);
+}
+.th:last-child { border-right: none; }
+.thPrivate { color: var(--accent); opacity: 0.7; }
+
+.tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+.tr:last-child { border-bottom: none; }
+.tr:hover { background: var(--bg3); }
+.tr:hover .tdCreator { background: var(--bg3); }
+
+.tdCreator {
+  padding: 12px 16px;
+  position: sticky;
+  left: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  transition: background .1s;
+}
+.tdCreatorInner {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.creatorName { font-size: 15px; font-weight: 600; color: var(--text); }
+.creatorName { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.periodDates { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 1px; }
 
-.periodsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 12px;
+.td {
+  padding: 12px 12px;
+  text-align: right;
+  vertical-align: middle;
+  border-right: 1px solid var(--border);
 }
+.td:last-child { border-right: none; }
+.tdPrivate { background: rgba(124,108,252,0.04); }
 
-.periodCard {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  transition: border-color .15s;
+.tdVal { font-family: var(--mono); font-size: 13px; color: var(--text); display: block; }
+
+.delta {
+  font-size: 10px;
+  font-family: var(--mono);
+  display: block;
+  margin-top: 2px;
 }
-.periodCard:hover { border-color: var(--border2); }
+.up { color: #4ade80; }
+.down { color: #f87171; }
 
-.periodHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid var(--border);
-}
-.periodLabel { font-size: 14px; font-weight: 600; color: var(--text); display: block; }
-.periodDates { font-size: 11px; color: var(--text3); margin-top: 2px; display: block; font-family: var(--mono); }
-
-.periodActions { display: flex; gap: 4px; }
+.actions { display: flex; gap: 4px; justify-content: flex-end; }
 .iconBtn {
   width: 26px; height: 26px;
   border-radius: 5px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text3);
-  font-size: 14px;
+  font-size: 13px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   transition: all .1s;
@@ -87,49 +153,53 @@
 .del:hover { color: #ff5050 !important; border-color: rgba(255,80,80,.3) !important; }
 .tiny { width: 20px; height: 20px; font-size: 11px; }
 
-.metricsGrid {
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* История */
+.historySection {
+  margin: 24px 28px 0;
 }
 
-.metricRow {
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  margin-bottom: 10px;
+}
+
+.historyBlock {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.historyHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--border);
-}
-.metricRow:last-child { border-bottom: none; }
-.privateRow { background: rgba(124,108,252,0.04); margin: 0 -4px; padding: 4px 4px; border-radius: 4px; }
-
-.metricLabel { font-size: 12px; color: var(--text3); }
-.metricVal { font-family: var(--mono); font-size: 13px; color: var(--text); font-weight: 500; }
-
-.historyToggle {
-  padding: 8px 16px;
-  font-size: 11.5px;
-  color: var(--text3);
+  gap: 10px;
+  padding: 10px 14px;
   cursor: pointer;
-  border-top: 1px solid var(--border);
-  background: var(--bg3);
-  transition: color .15s;
+  font-size: 13px;
+  color: var(--text2);
+  transition: background .1s;
 }
-.historyToggle:hover { color: var(--text); }
+.historyHeader:hover { background: var(--bg3); }
 
-.history {
-  padding: 8px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: var(--bg3);
+.historyCount {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
 }
+
+.historyRows { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 6px; }
 
 .historyRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   font-size: 12px;
   color: var(--text2);
   font-family: var(--mono);
@@ -137,8 +207,10 @@
 .historyDate { color: var(--text3); min-width: 80px; }
 .note { color: var(--text3); font-family: var(--font); font-style: italic; font-size: 11px; }
 
+/* Мобилка */
 @media (max-width: 768px) {
   .toolbar { padding: 0 16px 16px; }
-  .content { padding: 0 16px; }
-  .periodsGrid { grid-template-columns: 1fr; }
+  .tableWrap { margin: 0 16px; }
+  .historySection { margin: 20px 16px 0; }
+  .thCreator { min-width: 140px; }
 }

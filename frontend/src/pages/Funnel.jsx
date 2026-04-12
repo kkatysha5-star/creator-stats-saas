@@ -1,18 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../lib/api.js';
-import { fmtNum, platformMeta } from '../lib/utils.js';
+import { fmtNum } from '../lib/utils.js';
 import { PageHeader, Avatar, Btn, Input, Select, Modal, Loader, Empty } from '../components/UI.jsx';
 import styles from './Funnel.module.css';
 
 const ADMIN_KEY = 'funnel_admin_unlocked';
 
-function fmt(n, decimals = 2) {
+function fmt(n) {
   if (n == null || isNaN(n)) return '—';
-  return parseFloat(n).toFixed(decimals).replace('.', ',') + '%';
+  return parseFloat(n).toFixed(2).replace('.', ',') + '%';
 }
 function fmtRub(n) {
   if (n == null) return '—';
   return '₽\u202F' + fmtNum(Math.round(n));
+}
+function delta(curr, prev) {
+  if (curr == null || prev == null || prev === 0) return null;
+  return ((curr - prev) / prev * 100).toFixed(1);
 }
 
 export default function Funnel() {
@@ -23,10 +27,10 @@ export default function Funnel() {
   const [isAdmin, setIsAdmin] = useState(() => sessionStorage.getItem(ADMIN_KEY) === '1');
   const [showLogin, setShowLogin] = useState(false);
   const [showNewPeriod, setShowNewPeriod] = useState(false);
-  const [showSnapshot, setShowSnapshot] = useState(null); // period object
+  const [showSnapshot, setShowSnapshot] = useState(null);
   const [showEdit, setShowEdit] = useState(null);
-  const [selectedCreator, setSelectedCreator] = useState('');
-  const [showActive, setShowActive] = useState(true);
+  const [selectedLabel, setSelectedLabel] = useState('');
+  const [compareTo, setCompareTo] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,6 +52,21 @@ export default function Funnel() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Уникальные метки периодов (месяцы) — для переключателя
+  const labels = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    periods.forEach(p => {
+      if (!seen.has(p.label)) { seen.add(p.label); result.push(p.label); }
+    });
+    return result;
+  }, [periods]);
+
+  // Выбираем первый по умолчанию
+  useEffect(() => {
+    if (labels.length && !selectedLabel) setSelectedLabel(labels[0]);
+  }, [labels]);
+
   const handleLogin = async (pwd) => {
     sessionStorage.setItem('funnel_admin_pwd', pwd);
     const ok = await api.checkAdminPassword(pwd);
@@ -68,87 +87,170 @@ export default function Funnel() {
     setPrivateData({});
   };
 
-  const filtered = periods.filter(p => {
-    if (selectedCreator && String(p.creator_id) !== String(selectedCreator)) return false;
-    if (showActive && !p.is_active) return false;
-    if (!showActive && p.is_active) return false;
-    return true;
-  });
+  // Периоды выбранного месяца
+  const currentPeriods = useMemo(() =>
+    periods.filter(p => p.label === selectedLabel),
+    [periods, selectedLabel]
+  );
 
-  // Группируем по креатору
-  const byCreator = {};
-  filtered.forEach(p => {
-    if (!byCreator[p.creator_id]) byCreator[p.creator_id] = { name: p.creator_name, color: p.avatar_color, periods: [] };
-    byCreator[p.creator_id].periods.push(p);
-  });
+  // Периоды для сравнения
+  const comparePeriods = useMemo(() =>
+    periods.filter(p => p.label === compareTo),
+    [periods, compareTo]
+  );
+
+  const compareMap = useMemo(() => {
+    const m = {};
+    comparePeriods.forEach(p => { m[p.creator_id] = p; });
+    return m;
+  }, [comparePeriods]);
+
+  const COLS = [
+    { key: 'total_views',       label: 'Охват',              fmt: fmtNum },
+    { key: 'visits',            label: 'Заходов по арт.',    fmt: fmtNum },
+    { key: 'conv_visit_reach',  label: 'Конв. заход/охват',  fmt: fmt },
+    { key: 'cart',              label: 'Корзина',             fmt: fmtNum },
+    { key: 'conv_cart_visit',   label: 'Конв. корз/заход',   fmt: fmt },
+    { key: 'conv_cart_reach',   label: 'Конв. корз/охват',   fmt: fmt },
+    { key: 'orders',            label: 'Заказы',              fmt: fmtNum },
+    { key: 'conv_order_cart',   label: 'Конв. заказ/корз',   fmt: fmt },
+    { key: 'conv_order_reach',  label: 'Конв. заказ/охват',  fmt: fmt },
+    { key: 'cpm',               label: 'CPM',                 fmt: fmtRub },
+  ];
+
+  const ADMIN_COLS = [
+    { key: 'payout', label: 'Выплата 🔒', fmt: fmtRub, private: true },
+    { key: 'cac',    label: 'CAC 🔒',     fmt: fmtRub, private: true },
+  ];
+
+  const allCols = isAdmin ? [...COLS, ...ADMIN_COLS] : COLS;
 
   return (
     <div className={styles.page}>
       <PageHeader title="Воронка продаж" subtitle="Конверсии и продажи по периодам">
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           {isAdmin ? (
             <>
-              <Btn variant="primary" small onClick={() => setShowNewPeriod(true)}>+ Новый период</Btn>
+              <Btn variant="primary" small onClick={() => setShowNewPeriod(true)}>+ Период</Btn>
               <Btn small onClick={handleLogout}>Выйти</Btn>
             </>
           ) : (
-            <Btn small onClick={() => setShowLogin(true)}>🔒 Режим редактирования</Btn>
+            <Btn small onClick={() => setShowLogin(true)}>🔒 Редактировать</Btn>
           )}
         </div>
       </PageHeader>
 
+      {/* Переключатель месяца */}
       <div className={styles.toolbar}>
-        <select className={styles.filterSelect} value={selectedCreator} onChange={e => setSelectedCreator(e.target.value)}>
-          <option value="">Все креаторы</option>
-          {creators.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <div className={styles.toggleWrap}>
-          <button className={styles.toggleBtn + (showActive ? ' ' + styles.toggleActive : '')} onClick={() => setShowActive(true)}>Активные</button>
-          <button className={styles.toggleBtn + (!showActive ? ' ' + styles.toggleActive : '')} onClick={() => setShowActive(false)}>Архив</button>
+        <div className={styles.labelTabs}>
+          {labels.map(l => (
+            <button
+              key={l}
+              className={styles.labelTab + (selectedLabel === l ? ' ' + styles.labelTabActive : '')}
+              onClick={() => setSelectedLabel(l)}
+            >{l}</button>
+          ))}
         </div>
+        {labels.length > 1 && (
+          <div className={styles.compareWrap}>
+            <span className={styles.compareLabel}>Сравнить с:</span>
+            <select className={styles.filterSelect} value={compareTo} onChange={e => setCompareTo(e.target.value)}>
+              <option value="">— нет —</option>
+              {labels.filter(l => l !== selectedLabel).map(l => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
-      {loading ? <Loader /> : Object.keys(byCreator).length === 0
-        ? <Empty icon="📊" text="Нет данных" sub={isAdmin ? 'Создайте первый период' : 'Данные ещё не внесены'} />
+      {loading ? <Loader /> : currentPeriods.length === 0
+        ? <Empty icon="📊" text="Нет данных за этот период" sub={isAdmin ? 'Создайте периоды для креаторов' : 'Данные ещё не внесены'} />
         : (
-          <div className={styles.content}>
-            {Object.entries(byCreator).map(([creatorId, { name, color, periods: cPeriods }]) => (
-              <div key={creatorId} className={styles.creatorBlock}>
-                <div className={styles.creatorHeader}>
-                  <Avatar name={name} color={color} size={28} />
-                  <span className={styles.creatorName}>{name}</span>
-                </div>
-
-                <div className={styles.periodsGrid}>
-                  {cPeriods.map(p => {
-                    const priv = privateData[p.id];
-                    return (
-                      <PeriodCard
-                        key={p.id}
-                        period={p}
-                        privateData={priv}
-                        isAdmin={isAdmin}
-                        onAddSnapshot={() => setShowSnapshot(p)}
-                        onEdit={() => setShowEdit(p)}
-                        onDelete={async () => {
-                          if (!confirm('Удалить период и все данные?')) return;
-                          await api.deleteFunnelPeriod(p.id);
-                          load();
-                        }}
-                        onDeleteSnapshot={async (snapId) => {
-                          if (!confirm('Удалить эту запись?')) return;
-                          await api.deleteFunnelSnapshot(snapId);
-                          load();
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={styles.thCreator}>Креатор</th>
+                  {allCols.map(c => (
+                    <th key={c.key} className={styles.th + (c.private ? ' ' + styles.thPrivate : '')}>{c.label}</th>
+                  ))}
+                  {isAdmin && <th className={styles.th}>Действия</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {currentPeriods.map(p => {
+                  const prev = compareMap[p.creator_id];
+                  const priv = privateData[p.id];
+                  return (
+                    <tr key={p.id} className={styles.tr}>
+                      <td className={styles.tdCreator}>
+                        <div className={styles.tdCreatorInner}>
+                          <Avatar name={p.creator_name} color={p.avatar_color} size={26} />
+                          <div>
+                            <div className={styles.creatorName}>{p.creator_name}</div>
+                            <div className={styles.periodDates}>{p.date_from} — {p.date_to || 'сейчас'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      {COLS.map(c => {
+                        const val = p[c.key];
+                        const prevVal = prev ? prev[c.key] : null;
+                        const d = delta(val, prevVal);
+                        return (
+                          <td key={c.key} className={styles.td}>
+                            <span className={styles.tdVal}>{c.fmt(val)}</span>
+                            {d != null && (
+                              <span className={styles.delta + ' ' + (parseFloat(d) >= 0 ? styles.up : styles.down)}>
+                                {parseFloat(d) >= 0 ? '↑' : '↓'}{Math.abs(d)}%
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      {isAdmin && ADMIN_COLS.map(c => {
+                        const val = priv ? priv[c.key] : null;
+                        return (
+                          <td key={c.key} className={styles.td + ' ' + styles.tdPrivate}>
+                            <span className={styles.tdVal}>{c.fmt(val)}</span>
+                          </td>
+                        );
+                      })}
+                      {isAdmin && (
+                        <td className={styles.td}>
+                          <div className={styles.actions}>
+                            <button className={styles.iconBtn} onClick={() => setShowSnapshot(p)} title="Внести данные">+</button>
+                            <button className={styles.iconBtn} onClick={() => setShowEdit(p)} title="Редактировать">✎</button>
+                            <button className={styles.iconBtn + ' ' + styles.del} onClick={async () => {
+                              if (!confirm('Удалить период?')) return;
+                              await api.deleteFunnelPeriod(p.id);
+                              load();
+                            }} title="Удалить">✕</button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )
       }
+
+      {/* История снимков под таблицей */}
+      {currentPeriods.some(p => p.snapshots?.length > 0) && (
+        <div className={styles.historySection}>
+          <h2 className={styles.sectionTitle}>История записей</h2>
+          {currentPeriods.map(p => p.snapshots?.length > 0 && (
+            <HistoryBlock key={p.id} period={p} isAdmin={isAdmin} onDelete={async (sid) => {
+              if (!confirm('Удалить запись?')) return;
+              await api.deleteFunnelSnapshot(sid);
+              load();
+            }} />
+          ))}
+        </div>
+      )}
 
       {showLogin && <LoginModal onLogin={handleLogin} onClose={() => setShowLogin(false)} />}
       {showNewPeriod && <NewPeriodModal creators={creators} onClose={() => setShowNewPeriod(false)} onSaved={() => { setShowNewPeriod(false); load(); }} />}
@@ -158,72 +260,26 @@ export default function Funnel() {
   );
 }
 
-function PeriodCard({ period: p, privateData, isAdmin, onAddSnapshot, onEdit, onDelete, onDeleteSnapshot }) {
-  const [expanded, setExpanded] = useState(false);
-
-  const rows = [
-    { label: 'Охват', value: fmtNum(p.total_views), hint: null },
-    { label: 'Заходов по арт.', value: fmtNum(p.visits), hint: null },
-    { label: 'Конв. заход/охват', value: fmt(p.conv_visit_reach), hint: 'visits / views' },
-    { label: 'Корзина', value: fmtNum(p.cart), hint: null },
-    { label: 'Конв. корзина/заход', value: fmt(p.conv_cart_visit), hint: 'cart / visits' },
-    { label: 'Конв. корзина/охват', value: fmt(p.conv_cart_reach), hint: 'cart / views' },
-    { label: 'Заказы', value: fmtNum(p.orders), hint: null },
-    { label: 'Конв. заказ/корзина', value: fmt(p.conv_order_cart), hint: 'orders / cart' },
-    { label: 'Конв. заказ/охват', value: fmt(p.conv_order_reach), hint: 'orders / views' },
-    { label: 'CPM', value: fmtRub(p.cpm), hint: 'payout / views × 1000' },
-  ];
-
-  if (isAdmin && privateData) {
-    rows.push({ label: 'Выплата', value: fmtRub(privateData.payout), hint: null, private: true });
-    rows.push({ label: 'CAC', value: fmtRub(privateData.cac), hint: 'payout / orders', private: true });
-  }
-
+function HistoryBlock({ period: p, isAdmin, onDelete }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className={styles.periodCard}>
-      <div className={styles.periodHeader}>
-        <div>
-          <span className={styles.periodLabel}>{p.label}</span>
-          <span className={styles.periodDates}>{p.date_from} — {p.date_to || 'сейчас'}</span>
-        </div>
-        <div className={styles.periodActions}>
-          {isAdmin && (
-            <>
-              <button className={styles.iconBtn} onClick={onAddSnapshot} title="Внести данные">+</button>
-              <button className={styles.iconBtn} onClick={onEdit} title="Редактировать">✎</button>
-              <button className={styles.iconBtn + ' ' + styles.del} onClick={onDelete} title="Удалить">✕</button>
-            </>
-          )}
-        </div>
+    <div className={styles.historyBlock}>
+      <div className={styles.historyHeader} onClick={() => setOpen(!open)}>
+        <Avatar name={p.creator_name} color={p.avatar_color} size={20} />
+        <span>{p.creator_name} — {p.label}</span>
+        <span className={styles.historyCount}>{p.snapshots.length} зап.</span>
+        <span>{open ? '▴' : '▾'}</span>
       </div>
-
-      <div className={styles.metricsGrid}>
-        {rows.map(r => (
-          <div key={r.label} className={styles.metricRow + (r.private ? ' ' + styles.privateRow : '')}>
-            <span className={styles.metricLabel}>{r.label}{r.private ? ' 🔒' : ''}</span>
-            <span className={styles.metricVal}>{r.value}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* История снимков */}
-      {p.snapshots?.length > 0 && (
-        <div className={styles.historyToggle} onClick={() => setExpanded(!expanded)}>
-          История записей ({p.snapshots.length}) {expanded ? '▴' : '▾'}
-        </div>
-      )}
-      {expanded && (
-        <div className={styles.history}>
-          {p.snapshots.map((s, i) => (
+      {open && (
+        <div className={styles.historyRows}>
+          {p.snapshots.map(s => (
             <div key={s.id} className={styles.historyRow}>
               <span className={styles.historyDate}>{s.recorded_at?.slice(0, 10)}</span>
               <span>👁 {fmtNum(s.visits)}</span>
               <span>🛒 {fmtNum(s.cart)}</span>
               <span>✅ {fmtNum(s.orders)}</span>
               {s.note && <span className={styles.note}>{s.note}</span>}
-              {isAdmin && (
-                <button className={styles.iconBtn + ' ' + styles.del + ' ' + styles.tiny} onClick={() => onDeleteSnapshot(s.id)}>✕</button>
-              )}
+              {isAdmin && <button className={styles.iconBtn + ' ' + styles.del + ' ' + styles.tiny} onClick={() => onDelete(s.id)}>✕</button>}
             </div>
           ))}
         </div>
@@ -265,11 +321,12 @@ function NewPeriodModal({ creators, onClose, onSaved }) {
 
   return (
     <Modal title="Новый период" onClose={onClose}>
+      <p style={{ fontSize: 12, color: 'var(--text3)' }}>Название используется для группировки — у всех креаторов одного месяца оно должно совпадать, например «Апрель 26»</p>
       <Select label="Креатор" value={creatorId} onChange={e => setCreatorId(e.target.value)}>
         {creators.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </Select>
-      <Input label="Название (например: Апрель 2026)" value={label} onChange={e => setLabel(e.target.value)} />
-      <Input label="Дата начала" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+      <Input label="Название периода" placeholder="Апрель 26" value={label} onChange={e => setLabel(e.target.value)} />
+      <Input label="Дата начала работы этого креатора" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
       <Input label="Дата окончания (можно оставить пустой)" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
       {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -299,12 +356,12 @@ function SnapshotModal({ period, onClose, onSaved }) {
   };
 
   return (
-    <Modal title={`Внести данные — ${period.label}`} onClose={onClose}>
+    <Modal title={`Внести данные — ${period.creator_name}, ${period.label}`} onClose={onClose}>
       <p style={{ fontSize: 12, color: 'var(--text3)' }}>Накопительно с {period.date_from} по сегодня</p>
       <Input label="Заходы по артикулу" type="number" placeholder="0" value={visits} onChange={e => setVisits(e.target.value)} />
       <Input label="Положили в корзину" type="number" placeholder="0" value={cart} onChange={e => setCart(e.target.value)} />
       <Input label="Купили (заказы)" type="number" placeholder="0" value={orders} onChange={e => setOrders(e.target.value)} />
-      <Input label="Заметка (необязательно)" placeholder="например: данные за 1-7 апр" value={note} onChange={e => setNote(e.target.value)} />
+      <Input label="Заметка (необязательно)" placeholder="данные за 1–7 апр" value={note} onChange={e => setNote(e.target.value)} />
       {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <Btn onClick={onClose}>Отмена</Btn>
