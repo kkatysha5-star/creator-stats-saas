@@ -106,16 +106,16 @@ export default function Funnel() {
   }, [comparePeriods]);
 
   const COLS = [
-    { key: 'total_views',       label: 'Охват',              fmt: fmtNum },
-    { key: 'visits',            label: 'Заходов по арт.',    fmt: fmtNum },
-    { key: 'conv_visit_reach',  label: 'Конв. заход/охват',  fmt: fmt },
-    { key: 'cart',              label: 'Корзина',             fmt: fmtNum },
-    { key: 'conv_cart_visit',   label: 'Конв. корз/заход',   fmt: fmt },
-    { key: 'conv_cart_reach',   label: 'Конв. корз/охват',   fmt: fmt },
-    { key: 'orders',            label: 'Заказы',              fmt: fmtNum },
-    { key: 'conv_order_cart',   label: 'Конв. заказ/корз',   fmt: fmt },
-    { key: 'conv_order_reach',  label: 'Конв. заказ/охват',  fmt: fmt },
-    { key: 'cpm',               label: 'CPM',                 fmt: fmtRub },
+    { key: 'total_views',       label: 'Охват',        fmt: fmtNum },
+    { key: 'visits',            label: 'Заходы',       fmt: fmtNum },
+    { key: 'conv_visit_reach',  label: 'Зах/Охв',      fmt: fmt },
+    { key: 'cart',              label: 'Корзина',      fmt: fmtNum },
+    { key: 'conv_cart_visit',   label: 'Корз/Зах',     fmt: fmt },
+    { key: 'conv_cart_reach',   label: 'Корз/Охв',     fmt: fmt },
+    { key: 'orders',            label: 'Заказы',       fmt: fmtNum },
+    { key: 'conv_order_cart',   label: 'Зак/Корз',     fmt: fmt },
+    { key: 'conv_order_reach',  label: 'Зак/Охв',      fmt: fmt },
+    { key: 'cpm',               label: 'CPM',          fmt: fmtRub },
   ];
 
   const ADMIN_COLS = [

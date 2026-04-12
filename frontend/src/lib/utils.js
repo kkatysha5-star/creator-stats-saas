@@ -1,7 +1,6 @@
 export function fmtNum(n) {
   if (n == null) return '—';
-  // Используем тонкий пробел (U+202F) вместо неразрывного — он не растягивается
-  return n.toLocaleString('ru-RU').replace(/\u00A0/g, '\u202F');
+  return n.toLocaleString('ru-RU');
 }
 
 export function fmtEr(er) {
@@ -13,7 +12,7 @@ export function platformMeta(platform) {
   return {
     youtube: { label: 'YouTube', color: '#FF4444', short: 'YT' },
     tiktok:  { label: 'TikTok',  color: '#69C9D0', short: 'TT' },
-    instagram: { label: 'Instagram', color: '#E1306C', short: 'IG' },
+    instagram: { label: 'Instagram', color: '#F97316', short: 'IG' },
   }[platform] || { label: platform, color: '#888', short: '?' };
 }
 
