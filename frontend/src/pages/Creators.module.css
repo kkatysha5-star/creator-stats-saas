@@ -47,3 +47,10 @@
   opacity: 0.12;
   pointer-events: none;
 }
+
+/* ===== МОБИЛЬНАЯ АДАПТАЦИЯ ===== */
+@media (max-width: 768px) {
+  .grid { padding: 0 16px; grid-template-columns: 1fr 1fr; gap: 10px; }
+  /* Кнопки всегда видны на тач-устройствах */
+  .cardActions { opacity: 1; }
+}

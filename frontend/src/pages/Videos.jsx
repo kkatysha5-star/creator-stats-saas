@@ -133,32 +133,76 @@ function VideoRow({ video: v, refreshing, onRefresh, onDelete }) {
     : '—';
 
   return (
-    <div className={styles.row}>
-      <div className={styles.titleCell}>
-        <Avatar name={v.creator_name} color={v.avatar_color} size={26} />
-        <div className={styles.titleInfo}>
-          <a href={v.url} target="_blank" rel="noopener noreferrer" className={styles.videoTitle}>
-            {v.title || v.url}
-          </a>
-          <span className={styles.creatorName}>{v.creator_name}</span>
+    <>
+      {/* Десктопная строка */}
+      <div className={styles.row}>
+        <div className={styles.titleCell}>
+          <Avatar name={v.creator_name} color={v.avatar_color} size={26} />
+          <div className={styles.titleInfo}>
+            <a href={v.url} target="_blank" rel="noopener noreferrer" className={styles.videoTitle}>
+              {v.title || v.url}
+            </a>
+            <span className={styles.creatorName}>{v.creator_name}</span>
+          </div>
+        </div>
+        <PlatformBadge platform={v.platform} />
+        <span className={styles.date}>{v.published_at || '—'}</span>
+        <span className={styles.mono}>{fmtNum(v.views)}</span>
+        <span className={styles.mono}>{fmtNum(v.likes)}</span>
+        <span className={styles.mono}>{fmtNum(v.comments)}</span>
+        <span className={styles.mono}>{v.saves != null ? fmtNum(v.saves) : <span className={styles.na}>—</span>}</span>
+        <span className={styles.mono}>{v.shares != null ? fmtNum(v.shares) : <span className={styles.na}>—</span>}</span>
+        <span className={[styles.mono, styles.erVal].join(' ')}>{fmtEr(v.er)}</span>
+        <span className={styles.date}>{statsUpdated}</span>
+        <div className={styles.actions}>
+          <button className={styles.iconBtn} onClick={onRefresh} disabled={refreshing} title="Обновить статистику">
+            {refreshing ? '…' : '↻'}
+          </button>
+          <button className={styles.iconBtn + ' ' + styles.del} onClick={onDelete} title="Удалить">✕</button>
         </div>
       </div>
-      <PlatformBadge platform={v.platform} />
-      <span className={styles.date}>{v.published_at || '—'}</span>
-      <span className={styles.mono}>{fmtNum(v.views)}</span>
-      <span className={styles.mono}>{fmtNum(v.likes)}</span>
-      <span className={styles.mono}>{fmtNum(v.comments)}</span>
-      <span className={styles.mono}>{v.saves != null ? fmtNum(v.saves) : <span className={styles.na}>—</span>}</span>
-      <span className={styles.mono}>{v.shares != null ? fmtNum(v.shares) : <span className={styles.na}>—</span>}</span>
-      <span className={[styles.mono, styles.erVal].join(' ')}>{fmtEr(v.er)}</span>
-      <span className={styles.date}>{statsUpdated}</span>
-      <div className={styles.actions}>
-        <button className={styles.iconBtn} onClick={onRefresh} disabled={refreshing} title="Обновить статистику">
-          {refreshing ? '…' : '↻'}
-        </button>
-        <button className={styles.iconBtn + ' ' + styles.del} onClick={onDelete} title="Удалить">✕</button>
+
+      {/* Мобильная карточка */}
+      <div className={styles.mobileRow}>
+        <div className={styles.mobileTop}>
+          <Avatar name={v.creator_name} color={v.avatar_color} size={30} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <a href={v.url} target="_blank" rel="noopener noreferrer" className={styles.mobileTitle}>
+              {v.title || v.url}
+            </a>
+            <div className={styles.mobileCreator}>{v.creator_name}</div>
+          </div>
+        </div>
+        <div className={styles.mobileMeta}>
+          <PlatformBadge platform={v.platform} />
+          <span className={styles.date}>{v.published_at || '—'}</span>
+        </div>
+        <div className={styles.mobileStats}>
+          <div className={styles.mobileStat}>
+            <span className={styles.mobileStatLabel}>Просм.</span>
+            <span className={styles.mobileStatVal}>{fmtNum(v.views)}</span>
+          </div>
+          <div className={styles.mobileStat}>
+            <span className={styles.mobileStatLabel}>Лайки</span>
+            <span className={styles.mobileStatVal}>{fmtNum(v.likes)}</span>
+          </div>
+          <div className={styles.mobileStat}>
+            <span className={styles.mobileStatLabel}>Комм.</span>
+            <span className={styles.mobileStatVal}>{fmtNum(v.comments)}</span>
+          </div>
+          <div className={styles.mobileStat}>
+            <span className={styles.mobileStatLabel}>ER</span>
+            <span className={styles.mobileStatVal + ' ' + styles.accent}>{fmtEr(v.er)}</span>
+          </div>
+        </div>
+        <div className={styles.mobileActions}>
+          <button className={styles.iconBtn} onClick={onRefresh} disabled={refreshing} title="Обновить">
+            {refreshing ? '…' : '↻'}
+          </button>
+          <button className={styles.iconBtn + ' ' + styles.del} onClick={onDelete} title="Удалить">✕</button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

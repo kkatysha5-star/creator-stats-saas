@@ -76,3 +76,30 @@
   padding: 5px 12px; cursor: pointer; margin-top: 2px; transition: all .15s;
 }
 .addPlatBtn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+
+/* ===== МОБИЛЬНАЯ АДАПТАЦИЯ ===== */
+@media (max-width: 768px) {
+  .toolbar { padding: 0 16px 16px; }
+  .list { padding: 0 16px; gap: 10px; }
+
+  .cardHeader { flex-wrap: wrap; gap: 10px; }
+
+  /* Статистика переходит под заголовок */
+  .cardStats {
+    width: 100%;
+    gap: 12px;
+    justify-content: flex-start;
+    order: 3;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .cardLeft { flex: 1; min-width: 0; order: 1; }
+  .cardActions { order: 2; }
+
+  .stat { align-items: flex-start; }
+
+  /* Breakdown платформ */
+  .platformRow { flex-wrap: wrap; gap: 6px; }
+  .platStats { gap: 8px; flex-wrap: wrap; }
+}

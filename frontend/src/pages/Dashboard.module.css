@@ -123,3 +123,32 @@
 .viewsCell { display: flex; align-items: center; gap: 8px; }
 .viewsBar { flex: 1; height: 3px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
 .viewsFill { height: 100%; background: var(--accent); border-radius: 2px; opacity: 0.7; transition: width .4s ease; }
+
+/* ===== МОБИЛЬНАЯ АДАПТАЦИЯ ===== */
+@media (max-width: 768px) {
+  .toolbar { padding: 0 16px 16px; gap: 8px; }
+
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 0 16px 20px;
+    gap: 8px;
+  }
+
+  .platBreakdown { grid-template-columns: 1fr; gap: 8px; }
+
+  .section { padding: 0 16px; }
+
+  /* Таблица креаторов на мобиле — скрываем и делаем карточки */
+  .tableHead { display: none; }
+  .tableRow {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+  .tableRow > span { display: none; } /* прячем лишние колонки */
+  .tableRow > .creatorCell { display: flex; }
+  .tableRow > .viewsCell { display: flex; }
+  .tableRow > .mono:nth-child(4) { display: block; } /* просмотры */
+  .tableRow > .erVal { display: block; }
+}

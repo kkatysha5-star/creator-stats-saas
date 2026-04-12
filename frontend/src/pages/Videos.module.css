@@ -30,6 +30,7 @@
   overflow: hidden;
 }
 
+/* ДЕСКТОП */
 .tableHead {
   display: grid;
   grid-template-columns: 280px 110px 90px 100px 90px 90px 80px 80px 70px 120px 60px;
@@ -59,13 +60,8 @@
 .titleCell { display: flex; align-items: center; gap: 8px; overflow: hidden; }
 .titleInfo { display: flex; flex-direction: column; overflow: hidden; gap: 1px; }
 .videoTitle {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-  text-decoration: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 13px; font-weight: 500; color: var(--text);
+  text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .videoTitle:hover { color: var(--accent); }
 .creatorName { font-size: 11px; color: var(--text3); }
@@ -77,15 +73,80 @@
 
 .actions { display: flex; gap: 4px; align-items: center; }
 .iconBtn {
-  width: 26px; height: 26px;
-  border-radius: 5px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text3);
-  font-size: 13px;
+  width: 26px; height: 26px; border-radius: 5px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text3); font-size: 13px;
   display: flex; align-items: center; justify-content: center;
   transition: all .1s;
 }
 .iconBtn:hover:not(:disabled) { background: var(--bg3); color: var(--text); border-color: var(--border2); }
 .iconBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 .del:hover:not(:disabled) { color: #ff5050 !important; border-color: rgba(255,80,80,.3) !important; }
+
+/* только на мобиле */
+.mobileRow { display: none; }
+
+/* ===== МОБИЛЬНАЯ АДАПТАЦИЯ ===== */
+@media (max-width: 768px) {
+  .toolbar { padding: 0 16px 16px; }
+  .tableWrap { margin: 0 16px; }
+  .tableHead { display: none; }
+
+  /* Десктопная строка — скрываем */
+  .row { display: none; }
+
+  /* Мобильная карточка */
+  .mobileRow {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .mobileRow:last-child { border-bottom: none; }
+
+  .mobileTop {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .mobileTitle {
+    flex: 1;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+    text-decoration: none;
+    line-height: 1.4;
+  }
+  .mobileTitle:hover { color: var(--accent); }
+  .mobileCreator { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .mobileMeta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .mobileStats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    background: var(--bg3);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+  }
+  .mobileStat { display: flex; flex-direction: column; gap: 2px; }
+  .mobileStatLabel { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.4px; }
+  .mobileStatVal { font-family: var(--mono); font-size: 13px; color: var(--text); font-weight: 500; }
+  .mobileStatVal.accent { color: var(--accent); }
+
+  .mobileActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .iconBtn {
+    width: 32px; height: 32px; font-size: 15px;
+  }
+}
