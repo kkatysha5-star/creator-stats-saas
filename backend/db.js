@@ -3,7 +3,6 @@ import 'dotenv/config';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Use Turso in production, local SQLite in development
 export const db = createClient(
   isProduction
     ? {
@@ -65,6 +64,35 @@ export async function initDB() {
       er REAL,
       fetched_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY(video_id) REFERENCES videos(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Таблица периодов воронки
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS funnel_periods (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      creator_id INTEGER NOT NULL,
+      label TEXT NOT NULL,
+      date_from TEXT NOT NULL,
+      date_to TEXT,
+      is_active INTEGER DEFAULT 1,
+      payout REAL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY(creator_id) REFERENCES creators(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Еженедельные снимки воронки (накопительные)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS funnel_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      period_id INTEGER NOT NULL,
+      recorded_at TEXT DEFAULT (datetime('now')),
+      visits INTEGER DEFAULT 0,
+      cart INTEGER DEFAULT 0,
+      orders INTEGER DEFAULT 0,
+      note TEXT,
+      FOREIGN KEY(period_id) REFERENCES funnel_periods(id) ON DELETE CASCADE
     )
   `);
 

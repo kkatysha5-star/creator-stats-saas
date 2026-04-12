@@ -1,9 +1,14 @@
 const BASE = '/api';
 
-async function req(method, path, body) {
+async function req(method, path, body, adminPwd) {
+  const headers = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  const storedPwd = sessionStorage.getItem('funnel_admin_pwd');
+  const pwd = adminPwd || storedPwd;
+  if (pwd) headers['x-admin-password'] = pwd;
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json();
@@ -48,4 +53,19 @@ export const api = {
     return req('GET', `/stats/by-creator${q ? '?' + q : ''}`);
   },
   refreshAll: () => req('POST', '/stats/refresh-all'),
+
+  // Funnel
+  getFunnelPeriods: () => req('GET', '/funnel/periods'),
+  getFunnelPrivate: () => req('GET', '/funnel/periods/private'),
+  createFunnelPeriod: (body) => req('POST', '/funnel/periods', body),
+  updateFunnelPeriod: (id, body) => req('PUT', `/funnel/periods/${id}`, body),
+  deleteFunnelPeriod: (id) => req('DELETE', `/funnel/periods/${id}`),
+  addFunnelSnapshot: (periodId, body) => req('POST', `/funnel/periods/${periodId}/snapshots`, body),
+  deleteFunnelSnapshot: (id) => req('DELETE', `/funnel/snapshots/${id}`),
+  checkAdminPassword: async (pwd) => {
+    try {
+      await req('GET', '/funnel/periods/private', null, pwd);
+      return true;
+    } catch { return false; }
+  },
 };

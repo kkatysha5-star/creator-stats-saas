@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import Dashboard from './pages/Dashboard.jsx';
 import CreatorDashboard from './pages/CreatorDashboard.jsx';
+import Funnel from './pages/Funnel.jsx';
 import Posts from './pages/Posts.jsx';
 import Videos from './pages/Videos.jsx';
 import Creators from './pages/Creators.jsx';
@@ -33,6 +34,9 @@ export default function App() {
             <NavLink to="/creators" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
               <IconUsers /> Креаторы
             </NavLink>
+            <NavLink to="/funnel" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+              <IconFunnel /> Воронка
+            </NavLink>
           </nav>
         </aside>
         <main className="main-content">
@@ -42,6 +46,7 @@ export default function App() {
             <Route path="/videos" element={<Videos />} />
             <Route path="/creators" element={<Creators />} />
             <Route path="/creator/:id" element={<CreatorDashboard />} />
+            <Route path="/funnel" element={<Funnel />} />
           </Routes>
         </main>
       </div>
@@ -57,6 +62,9 @@ function IconFilm() {
 }
 function IconVideo() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="10" height="10" rx="2"/><path d="M11 6l4-2v8l-4-2V6z"/></svg>;
+}
+function IconFunnel() {
+  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 2h12l-4.5 6v5l-3-1.5V8L2 2z"/></svg>;
 }
 function IconUsers() {
   return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-5 5-5s5 2 5 5"/><circle cx="12" cy="5" r="2"/><path d="M14 14c0-2-1-3.5-2-4"/></svg>;

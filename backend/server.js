@@ -10,6 +10,7 @@ import videosRouter from './routes/videos.js';
 import statsRouter from './routes/stats.js';
 import postsRouter from './routes/posts.js';
 import { setupCron } from './cron.js';
+import funnelRouter from './routes/funnel.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -24,6 +25,7 @@ initDB().then(() => {
   app.use('/api/videos', videosRouter);
   app.use('/api/stats', statsRouter);
   app.use('/api/posts', postsRouter);
+  app.use('/api/funnel', funnelRouter);
 
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '../frontend/dist')));
