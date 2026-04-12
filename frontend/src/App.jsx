@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import Dashboard from './pages/Dashboard.jsx';
+import CreatorDashboard from './pages/CreatorDashboard.jsx';
 import Posts from './pages/Posts.jsx';
 import Videos from './pages/Videos.jsx';
 import Creators from './pages/Creators.jsx';
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/posts" element={<Posts />} />
             <Route path="/videos" element={<Videos />} />
             <Route path="/creators" element={<Creators />} />
+            <Route path="/creator/:id" element={<CreatorDashboard />} />
           </Routes>
         </main>
       </div>
