@@ -20,7 +20,14 @@ router.get('/', async (req, res) => {
       ORDER BY p.creator_id ASC, p.published_at ASC, p.added_at ASC
     `, args });
 
-    const posts = postsResult.rows;
+    // Сортируем по дате + id для стабильного порядка (тайбрейкер при одинаковой дате)
+    const posts = [...postsResult.rows].sort((a, b) => {
+      const da = a.published_at || a.added_at || '';
+      const db2 = b.published_at || b.added_at || '';
+      if (da !== db2) return da.localeCompare(db2);
+      return a.id - b.id;
+    });
+
     const creatorCounters = {};
     const postsWithNum = posts.map(post => {
       if (!creatorCounters[post.creator_id]) creatorCounters[post.creator_id] = 0;
@@ -28,10 +35,12 @@ router.get('/', async (req, res) => {
       return { ...post, post_num: creatorCounters[post.creator_id] };
     });
 
+    // Показываем новые ролики первыми, номера уже корректны
     postsWithNum.sort((a, b) => {
       const da = a.published_at || a.added_at || '';
       const db2 = b.published_at || b.added_at || '';
-      return db2.localeCompare(da);
+      if (db2 !== da) return db2.localeCompare(da);
+      return b.id - a.id;
     });
 
     const result = await Promise.all(postsWithNum.map(async post => {
@@ -141,6 +150,8 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
+    // Удаляем видео, привязанные к этому посту
+    await db.execute({ sql: 'DELETE FROM videos WHERE post_id = ?', args: [req.params.id] });
     await db.execute({ sql: 'DELETE FROM posts WHERE id = ?', args: [req.params.id] });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
