@@ -22,7 +22,8 @@ router.get('/summary', async (req, res) => {
         SUM(COALESCE(s.comments, 0)) as total_comments,
         SUM(COALESCE(s.saves, 0)) as total_saves,
         SUM(COALESCE(s.shares, 0)) as total_shares,
-        AVG(CASE WHEN s.views > 0 THEN s.er END) as avg_er
+        AVG(CASE WHEN s.views > 0 THEN s.er END) as avg_er,
+        MAX(s.fetched_at) as last_updated
       FROM videos v
       JOIN creators c ON v.creator_id = c.id
       LEFT JOIN (
