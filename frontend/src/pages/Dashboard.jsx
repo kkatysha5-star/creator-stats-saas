@@ -67,16 +67,7 @@ export default function Dashboard() {
 
   const allViews = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (summaryByPlat[p]?.total_views || 0), 0);
 
-  // Последнее время обновления — берём максимальное среди платформ
-  const lastUpdated = ['youtube', 'tiktok', 'instagram']
-    .map(p => summaryByPlat[p]?.last_updated)
-    .filter(Boolean)
-    .sort()
-    .pop();
 
-  const lastUpdatedFmt = lastUpdated
-    ? new Date(lastUpdated).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-    : null;
 
   const filteredCreators = byCreator.filter(c => {
     if (!c.platforms) return false;
@@ -86,14 +77,7 @@ export default function Dashboard() {
   return (
     <div className={styles.page}>
       <PageHeader title="Дашборд" subtitle="Сводная статистика по всем креаторам">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {lastUpdatedFmt && (
-            <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
-              обновлено {lastUpdatedFmt}
-            </span>
-          )}
-          <Btn onClick={handleRefreshAll} loading={refreshing} small>↻ Обновить данные</Btn>
-        </div>
+        <Btn onClick={handleRefreshAll} loading={refreshing} small>↻ Обновить данные</Btn>
       </PageHeader>
 
       <div className={styles.toolbar}>
