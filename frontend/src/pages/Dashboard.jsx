@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { fmtNum, fmtEr, platformMeta, periodToDates } from '../lib/utils.js';
 import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Btn, Loader, Empty } from '../components/UI.jsx';
@@ -13,6 +14,7 @@ export default function Dashboard() {
   const [byCreator, setByCreator] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const navigate = useNavigate();
 
   const load = useCallback(async () => {
     if (period === 'custom' && !customFrom && !customTo) return;
@@ -151,7 +153,7 @@ export default function Dashboard() {
                     <span>ER</span>
                   </div>
                   {filteredCreators.map(c => (
-                    <CreatorRow key={c.creator_id} creator={c} maxViews={filteredCreators[0]?.total_views || 1} activePlatforms={platforms} />
+                    <CreatorRow key={c.creator_id} creator={c} maxViews={filteredCreators[0]?.total_views || 1} activePlatforms={platforms} onOpen={() => navigate(`/creator/${c.creator_id}`)} />
                   ))}
                 </div>
               )
@@ -163,15 +165,15 @@ export default function Dashboard() {
   );
 }
 
-function CreatorRow({ creator: c, maxViews, activePlatforms }) {
+function CreatorRow({ creator: c, maxViews, activePlatforms, onOpen }) {
   const barWidth = Math.round((c.total_views / maxViews) * 100);
   const plats = c.platforms ? c.platforms.split(',').filter(p => activePlatforms.has(p)) : [];
 
   return (
     <div className={styles.tableRow}>
-      <div className={styles.creatorCell}>
+      <div className={styles.creatorCell} onClick={onOpen} style={{ cursor: 'pointer' }}>
         <Avatar name={c.creator_name} color={c.avatar_color} size={30} />
-        <span className={styles.creatorName}>{c.creator_name}</span>
+        <span className={styles.creatorName} style={{ color: 'var(--accent)' }}>{c.creator_name}</span>
       </div>
       <div className={styles.platVideos}>
         <div className={styles.platDots}>
