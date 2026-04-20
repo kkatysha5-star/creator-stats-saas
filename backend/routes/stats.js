@@ -48,7 +48,7 @@ router.get('/by-creator', async (req, res) => {
     const result = await db.execute({ sql: `
       SELECT
         c.id as creator_id, c.name as creator_name, c.avatar_color,
-        c.video_plan_count, c.video_plan_period, c.reach_plan,
+        c.video_plan_count, c.video_plan_period, c.reach_plan, c.daily_rate,
         (SELECT fp.date_from FROM funnel_periods fp WHERE fp.creator_id = c.id AND fp.is_active = 1 ORDER BY fp.date_from DESC LIMIT 1) as period_start,
         COUNT(DISTINCT COALESCE(v.post_id, v.id)) as total_videos,
         GROUP_CONCAT(DISTINCT v.platform) as platforms,

@@ -103,6 +103,7 @@ export async function initDB() {
   try { await db.execute('ALTER TABLE creators ADD COLUMN video_plan_count INTEGER DEFAULT 0'); } catch {}
   try { await db.execute('ALTER TABLE creators ADD COLUMN video_plan_period TEXT DEFAULT \'month\''); } catch {}
   try { await db.execute('ALTER TABLE creators ADD COLUMN reach_plan INTEGER DEFAULT 0'); } catch {}
+  try { await db.execute('ALTER TABLE creators ADD COLUMN daily_rate INTEGER DEFAULT 0'); } catch {}
 
   console.log('Database initialized');
 }

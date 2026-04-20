@@ -110,6 +110,7 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
   const [color, setColor] = useState(initial?.avatar_color || colors[0]);
   const [videoPlanCount, setVideoPlanCount] = useState(initial?.video_plan_count || '');
   const [videoPlanPeriod, setVideoPlanPeriod] = useState(initial?.video_plan_period || 'month');
+  const [dailyRate, setDailyRate] = useState(initial?.daily_rate || '');
   const [reachPlan, setReachPlan] = useState(initial?.reach_plan || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -122,6 +123,7 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
         name, username, avatar_color: color,
         video_plan_count: parseInt(videoPlanCount) || 0,
         video_plan_period: videoPlanPeriod,
+        daily_rate: parseInt(dailyRate) || 0,
         reach_plan: parseInt(reachPlan) || 0,
       };
       if (initial) {
@@ -171,6 +173,20 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
         </div>
         {monthEquiv && <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{monthEquiv}</p>}
       </div>
+
+      {/* Роликов в день для расчёта отставания */}
+      <Input
+        label="📅 Роликов в день (для расчёта отставания)"
+        placeholder="2"
+        type="number"
+        value={dailyRate}
+        onChange={e => setDailyRate(e.target.value)}
+      />
+      {dailyRate && videoPlanCount && (
+        <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: -8 }}>
+          При {dailyRate} рол/день план {videoPlanCount} {videoPlanPeriod === 'month' ? 'в месяц' : videoPlanPeriod === 'week' ? 'в неделю' : 'в день'} закроется за ~{Math.ceil(parseInt(videoPlanCount) / parseInt(dailyRate))} дней
+        </p>
+      )}
 
       {/* План охватов */}
       <Input

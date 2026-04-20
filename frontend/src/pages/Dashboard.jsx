@@ -171,16 +171,14 @@ export default function Dashboard() {
                 <div className={styles.creatorsTable}>
                   {(() => {
                     const hasVideoPlan = filteredCreators.some(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0);
-                    const hasReachPlan = filteredCreators.some(c => c.reach_plan > 0);
-                    const extraCols = (hasVideoPlan ? ' 120px' : '') + (hasReachPlan ? ' 120px' : '');
+                    const extraCols = hasVideoPlan ? ' 140px' : '';
                     const gridCols = `200px 130px${extraCols} 180px 100px 100px 80px 80px`;
                     return (
                       <>
                         <div className={styles.tableHead} style={{ gridTemplateColumns: gridCols }}>
                           <span>Креатор</span>
                           <span>Платф. / Роликов</span>
-                          {hasVideoPlan && <span>Ролики</span>}
-                          {hasReachPlan && <span>Охваты</span>}
+                          {hasVideoPlan && <span>Ролики план/факт</span>}
                           <span>Просмотры</span>
                           <span>Лайки</span>
                           <span>Коммент.</span>
@@ -191,11 +189,9 @@ export default function Dashboard() {
                           <CreatorRow
                             key={c.creator_id}
                             creator={c}
-                            maxViews={filteredCreators[0]?.total_views || 1}
                             activePlatforms={platforms}
                             onOpen={() => navigate(`/creator/${c.creator_id}`)}
                             showVideoPlan={hasVideoPlan}
-                            showReachPlan={hasReachPlan}
                             gridCols={gridCols}
                           />
                         ))}
@@ -212,48 +208,77 @@ export default function Dashboard() {
   );
 }
 
-function CreatorRow({ creator: c, maxViews, activePlatforms, onOpen, showVideoPlan, showReachPlan, gridCols }) {
+function CreatorRow({ creator: c, activePlatforms, onOpen, showVideoPlan, gridCols }) {
   const plats = c.platforms ? c.platforms.split(',').filter(p => activePlatforms.has(p)) : [];
-  const monthPlan = c.video_plan_period === 'week' ? (c.video_plan_count || 0) * 4 : (c.video_plan_count || 0);
-  const videoPct = monthPlan > 0 ? Math.min(Math.round((c.total_videos || 0) / monthPlan * 100), 100) : null;
-  const reachPct = c.reach_plan > 0 ? Math.min(Math.round((c.total_views || 0) / c.reach_plan * 100), 100) : null;
 
-  // Дневной план
-  const dayPlan = c.video_plan_period === 'day' ? (c.video_plan_count || 0) : null;
+  // Месячный план
+  const monthPlan = c.video_plan_period === 'day'
+    ? (c.video_plan_count || 0) * 30
+    : c.video_plan_period === 'week'
+    ? (c.video_plan_count || 0) * 4
+    : (c.video_plan_count || 0);
 
-  // Считаем сколько роликов должно быть к сегодня (по дате старта)
-  let expectedByNow = null;
-  let behindBy = null;
-  if (c.period_start) {
+  const videoPct = monthPlan > 0
+    ? Math.min(Math.round((c.total_videos || 0) / monthPlan * 100), 100)
+    : null;
+
+  // Отставание по дате старта из воронки
+  let behindStatus = null;
+  if (monthPlan > 0 && c.period_start && c.video_plan_count > 0) {
     const start = new Date(c.period_start);
     const today = new Date();
     const daysPassed = Math.max(0, Math.floor((today - start) / 86400000));
-    if (c.video_plan_period === 'day' && c.video_plan_count > 0) {
-      expectedByNow = (c.video_plan_count || 0) * daysPassed;
+    let expectedByNow;
+    // daily_rate — сколько роликов в день по договорённости
+    const ratePerDay = c.daily_rate > 0 ? c.daily_rate : null;
+    if (ratePerDay) {
+      expectedByNow = ratePerDay * daysPassed;
     } else if (monthPlan > 0) {
       expectedByNow = Math.round(monthPlan * Math.min(daysPassed, 30) / 30);
     }
-    if (expectedByNow !== null) {
-      behindBy = expectedByNow - (c.total_videos || 0);
-    }
+    const behind = expectedByNow - (c.total_videos || 0);
+    behindStatus = behind > 0 ? `−${behind} отстаёт` : 'в графике';
   }
 
   return (
     <div className={styles.tableRow} style={{ gridTemplateColumns: gridCols }}>
+      {/* Креатор */}
       <div className={styles.creatorCell} onClick={onOpen} style={{ cursor: 'pointer' }}>
         <Avatar name={c.creator_name} color={c.avatar_color} size={30} />
         <span className={styles.creatorName} style={{ color: 'var(--accent)' }}>{c.creator_name}</span>
       </div>
+      {/* Платформы / Роликов */}
       <div className={styles.platVideos}>
-        <div className={styles.platDots}>
-          {plats.map(p => <PlatformDot key={p} platform={p} />)}
-        </div>
+        <div className={styles.platDots}>{plats.map(p => <PlatformDot key={p} platform={p} />)}</div>
         <span className={styles.platCount}>{c.total_videos}</span>
       </div>
+      {/* Ролики план/факт + % + статус */}
+      {showVideoPlan && (
+        <span className={styles.mono}>
+          {monthPlan > 0 ? (
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+              <span>{c.total_videos || 0} / {monthPlan}</span>
+              <span style={{ fontSize: 10, color: videoPct >= 100 ? '#4ade80' : videoPct >= 70 ? '#f59e0b' : 'var(--text3)' }}>
+                {videoPct}%
+              </span>
+              {behindStatus && (
+                <span style={{ fontSize: 10, color: behindStatus.includes('отстаёт') ? '#f87171' : '#4ade80' }}>
+                  {behindStatus}
+                </span>
+              )}
+            </span>
+          ) : <span style={{ color: 'var(--text3)' }}>—</span>}
+        </span>
+      )}
+      {/* Просмотры */}
       <span className={styles.mono}>{fmtNum(c.total_views)}</span>
+      {/* Лайки */}
       <span className={styles.mono}>{fmtNum(c.total_likes)}</span>
+      {/* Комм. */}
       <span className={styles.mono}>{fmtNum(c.total_comments)}</span>
+      {/* Репосты */}
       <span className={styles.mono}>{c.total_shares ? fmtNum(c.total_shares) : <span className={styles.na}>—</span>}</span>
+      {/* ER */}
       <span className={[styles.mono, styles.erVal].join(' ')}>{fmtEr(c.avg_er)}</span>
     </div>
   );
