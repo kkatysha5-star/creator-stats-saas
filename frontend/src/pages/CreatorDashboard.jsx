@@ -50,8 +50,18 @@ export default function CreatorDashboard() {
   const totalVideos = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (summaryByPlat[p]?.total_videos || 0), 0);
   const avgEr = allViews > 0 ? ((totalLikes + totalComments + totalSaves) / allViews * 100) : 0;
 
+  const [showAllVideos, setShowAllVideos] = useState(false);
+  const [videoSort, setVideoSort] = useState('views');
+
   // Топ видео по просмотрам
-  const topVideos = [...videos].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
+  const sortedVideos = [...videos].sort((a, b) => {
+    if (videoSort === 'views') return (b.views || 0) - (a.views || 0);
+    if (videoSort === 'er') return (b.er || 0) - (a.er || 0);
+    if (videoSort === 'date') return (b.published_at || '').localeCompare(a.published_at || '');
+    return 0;
+  });
+  const topVideos = sortedVideos.slice(0, 5);
+  const allVideos = sortedVideos;
 
   return (
     <div className={styles.page}>
@@ -119,12 +129,33 @@ export default function CreatorDashboard() {
             </div>
           )}
 
-          {/* Топ видео */}
-          {topVideos.length > 0 && (
+
+
+          {/* Все ролики */}
+          {videos.length > 0 && (
             <div className={styles.section}>
-              <h2 className={styles.sectionTitle}>Топ роликов</h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <h2 className={styles.sectionTitle}>Все ролики ({videos.length})</h2>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <select
+                    value={videoSort}
+                    onChange={e => setVideoSort(e.target.value)}
+                    style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', color: 'var(--text2)', fontFamily: 'var(--font)', fontSize: 12, padding: '4px 8px', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="views">По просмотрам</option>
+                    <option value="er">По ER</option>
+                    <option value="date">По дате</option>
+                  </select>
+                  <button
+                    onClick={() => setShowAllVideos(!showAllVideos)}
+                    style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', color: 'var(--text2)', fontFamily: 'var(--font)', fontSize: 12, padding: '4px 10px', cursor: 'pointer' }}
+                  >
+                    {showAllVideos ? 'Свернуть' : 'Показать все'}
+                  </button>
+                </div>
+              </div>
               <div className={styles.topVideos}>
-                {topVideos.map((v, i) => (
+                {(showAllVideos ? allVideos : allVideos.slice(0, 5)).map((v, i) => (
                   <div key={v.id} className={styles.videoRow}>
                     <span className={styles.rank}>#{i + 1}</span>
                     <PlatformBadge platform={v.platform} />
@@ -139,6 +170,14 @@ export default function CreatorDashboard() {
                   </div>
                 ))}
               </div>
+              {!showAllVideos && videos.length > 5 && (
+                <button
+                  onClick={() => setShowAllVideos(true)}
+                  style={{ width: '100%', marginTop: 8, padding: '8px', background: 'transparent', border: '1px dashed var(--border2)', borderRadius: 'var(--radius-sm)', color: 'var(--text3)', fontFamily: 'var(--font)', fontSize: 12, cursor: 'pointer' }}
+                >
+                  Показать ещё {videos.length - 5} роликов ▾
+                </button>
+              )}
             </div>
           )}
 

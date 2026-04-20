@@ -87,7 +87,7 @@
 
 .tableHead {
   display: grid;
-  grid-template-columns: 200px 130px 70px 70px 180px 100px 100px 80px 80px 80px;
+  grid-template-columns: 200px 130px 180px 100px 100px 80px 80px 80px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   font-size: 11px;
@@ -101,7 +101,7 @@
 
 .tableRow {
   display: grid;
-  grid-template-columns: 200px 130px 70px 70px 180px 100px 100px 80px 80px 80px;
+  grid-template-columns: 200px 130px 180px 100px 100px 80px 80px 80px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   gap: 0;

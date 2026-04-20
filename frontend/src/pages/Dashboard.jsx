@@ -171,8 +171,8 @@ export default function Dashboard() {
                   <div className={styles.tableHead}>
                     <span>Креатор</span>
                     <span>Платформы / Роликов</span>
-                    <span>Ролики %</span>
-                    <span>Охваты %</span>
+                    {filteredCreators.some(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0) && <span>Ролики %</span>}
+                    {filteredCreators.some(c => c.reach_plan > 0) && <span>Охваты %</span>}
                     <span>Просмотры</span>
                     <span>Лайки</span>
                     <span>Коммент.</span>
@@ -181,7 +181,15 @@ export default function Dashboard() {
                     <span>ER</span>
                   </div>
                   {filteredCreators.map(c => (
-                    <CreatorRow key={c.creator_id} creator={c} maxViews={filteredCreators[0]?.total_views || 1} activePlatforms={platforms} onOpen={() => navigate(`/creator/${c.creator_id}`)} />
+                    <CreatorRow
+                      key={c.creator_id}
+                      creator={c}
+                      maxViews={filteredCreators[0]?.total_views || 1}
+                      activePlatforms={platforms}
+                      onOpen={() => navigate(`/creator/${c.creator_id}`)}
+                      showVideoPlan={filteredCreators.some(cr => (cr.video_plan_period === 'week' ? (cr.video_plan_count||0)*4 : (cr.video_plan_count||0)) > 0)}
+                      showReachPlan={filteredCreators.some(cr => cr.reach_plan > 0)}
+                    />
                   ))}
                 </div>
               )
@@ -193,7 +201,7 @@ export default function Dashboard() {
   );
 }
 
-function CreatorRow({ creator: c, maxViews, activePlatforms, onOpen }) {
+function CreatorRow({ creator: c, maxViews, activePlatforms, onOpen, showVideoPlan, showReachPlan }) {
   const plats = c.platforms ? c.platforms.split(',').filter(p => activePlatforms.has(p)) : [];
   const monthPlan = c.video_plan_period === 'week' ? (c.video_plan_count || 0) * 4 : (c.video_plan_count || 0);
   const videoPct = monthPlan > 0 ? Math.min(Math.round((c.total_videos || 0) / monthPlan * 100), 100) : null;
