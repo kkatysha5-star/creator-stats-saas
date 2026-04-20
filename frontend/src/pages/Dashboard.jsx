@@ -172,8 +172,8 @@ export default function Dashboard() {
                   <div className={styles.tableHead}>
                     <span>Креатор</span>
                     <span>Платформы / Роликов</span>
-                    {filteredCreators.some(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0) && <span>Ролики %</span>}
-                    {filteredCreators.some(c => c.reach_plan > 0) && <span>Охваты %</span>}
+                    {filteredCreators.some(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0) && <span>Ролики</span>}
+                    {filteredCreators.some(c => c.reach_plan > 0) && <span>Охваты</span>}
                     <span>Просмотры</span>
                     <span>Лайки</span>
                     <span>Коммент.</span>

@@ -50,6 +50,16 @@ export default function CreatorDashboard() {
   const totalVideos = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (summaryByPlat[p]?.total_videos || 0), 0);
   const avgEr = allViews > 0 ? ((totalLikes + totalComments + totalSaves) / allViews * 100) : 0;
 
+  // Планы
+  const monthVideoPlan = creator
+    ? (creator.video_plan_period === 'week' ? (creator.video_plan_count || 0) * 4 : (creator.video_plan_count || 0))
+    : 0;
+  const totalUniqueVideos = videos.filter((v, i, arr) =>
+    v.post_id ? arr.findIndex(x => x.post_id === v.post_id) === i : true
+  ).length;
+  const videoPct = monthVideoPlan > 0 ? Math.min(Math.round(totalUniqueVideos / monthVideoPlan * 100), 100) : null;
+  const reachPct = creator?.reach_plan > 0 ? Math.min(Math.round(allViews / creator.reach_plan * 100), 100) : null;
+
   const [showAllVideos, setShowAllVideos] = useState(false);
   const [videoSort, setVideoSort] = useState('views');
 
@@ -92,6 +102,40 @@ export default function CreatorDashboard() {
             <MetricCard label="Репосты" value={fmtNum(totalShares)} />
             <MetricCard label="Средний ER" value={fmtEr(avgEr)} />
           </div>
+
+          {/* Планы */}
+          {(videoPct !== null || reachPct !== null) && (
+            <div style={{ padding: '0 28px 20px', display: 'flex', gap: 10 }}>
+              {videoPct !== null && (
+                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', flex: 1 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>🎬 Ролики план/факт</div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.5px' }}>
+                    {totalUniqueVideos} / {monthVideoPlan}
+                  </div>
+                  <div style={{ marginTop: 8, height: 4, background: 'var(--bg4)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: videoPct + '%', background: videoPct >= 100 ? '#4ade80' : videoPct >= 70 ? '#f59e0b' : 'var(--accent)', borderRadius: 2, transition: 'width .4s' }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: videoPct >= 100 ? '#4ade80' : videoPct >= 70 ? '#f59e0b' : 'var(--text3)', marginTop: 4 }}>
+                    {videoPct}% выполнения
+                  </div>
+                </div>
+              )}
+              {reachPct !== null && (
+                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', flex: 1 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>👁 Охваты план/факт</div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.5px' }}>
+                    {fmtNum(allViews)} / {fmtNum(creator.reach_plan)}
+                  </div>
+                  <div style={{ marginTop: 8, height: 4, background: 'var(--bg4)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: reachPct + '%', background: reachPct >= 100 ? '#4ade80' : reachPct >= 70 ? '#f59e0b' : 'var(--accent)', borderRadius: 2, transition: 'width .4s' }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: reachPct >= 100 ? '#4ade80' : reachPct >= 70 ? '#f59e0b' : 'var(--text3)', marginTop: 4 }}>
+                    {reachPct}% выполнения
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Разбивка по платформам */}
           {allViews > 0 && (
