@@ -7,6 +7,7 @@ import Creators from './pages/Creators.jsx';
 import CreatorDashboard from './pages/CreatorDashboard.jsx';
 import Funnel from './pages/Funnel.jsx';
 import Login from './pages/Login.jsx';
+import Settings from './pages/Settings.jsx';
 import Onboarding from './pages/Onboarding.jsx';
 import { api } from './lib/api.js';
 import './App.css';
@@ -94,14 +95,14 @@ function AppLayout({ auth }) {
           </NavLink>
         </nav>
         <div style={{ marginTop: 'auto', padding: '0 8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--border)' }}>
-            {auth?.user?.avatar && <img src={auth.user.avatar} style={{ width: 24, height: 24, borderRadius: '50%' }} />}
-            <span style={{ fontSize: 12, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{auth?.user?.name}</span>
-          </div>
-          <button onClick={async () => { await api.logout(); window.location.href = '/login'; }}
-            style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text3)', fontSize: 12, textAlign: 'left', padding: '4px 0', cursor: 'pointer' }}>
-            Выйти
-          </button>
+          <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'} style={{ borderTop: '1px solid var(--border)', marginTop: 4, paddingTop: 12 }}>
+            <IconSettings />
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ fontSize: 12, fontWeight: 500, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{auth?.user?.name}</div>
+              <div style={{ fontSize: 10, color: 'var(--text3)' }}>Настройки</div>
+            </div>
+            {auth?.user?.avatar && <img src={auth.user.avatar} style={{ width: 22, height: 22, borderRadius: '50%', marginLeft: 'auto', flexShrink: 0 }} />}
+          </NavLink>
         </div>
       </aside>
       <main className="main-content">
@@ -112,6 +113,7 @@ function AppLayout({ auth }) {
           <Route path="/creators" element={isManager ? <Creators /> : <Navigate to="/" />} />
           <Route path="/creator/:id" element={<CreatorDashboard />} />
           <Route path="/funnel" element={<Funnel />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
     </div>
@@ -132,3 +134,4 @@ function IconFilm() { return <svg width="16" height="16" viewBox="0 0 16 16" fil
 function IconVideo() { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="10" height="10" rx="2"/><path d="M11 6l4-2v8l-4-2V6z"/></svg>; }
 function IconUsers() { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-5 5-5s5 2 5 5"/><circle cx="12" cy="5" r="2"/><path d="M14 14c0-2-1-3.5-2-4"/></svg>; }
 function IconFunnel() { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 2h12l-4.5 6v5l-3-1.5V8L2 2z"/></svg>; }
+function IconSettings() { return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>; }
