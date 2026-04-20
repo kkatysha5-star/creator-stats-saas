@@ -73,7 +73,8 @@ export default function Dashboard() {
     return s + monthly;
   }, 0);
   const totalReachPlan = byCreator.reduce((s, c) => s + (c.reach_plan || 0), 0);
-  const totalVideos = summary.total_videos || 0;
+  // Считаем уникальные ролики из byCreator (дедуплицировано по post_id)
+  const totalVideos = byCreator.reduce((s, c) => s + (c.total_videos || 0), 0);
   const reachPct = totalReachPlan > 0 ? Math.min(Math.round(allViews / totalReachPlan * 100), 100) : null;
   const videoPct = totalVideoPlan > 0 ? Math.min(Math.round(totalVideos / totalVideoPlan * 100), 100) : null;
 
@@ -114,7 +115,7 @@ export default function Dashboard() {
       {loading ? <Loader /> : (
         <div className="fade-in">
           <div className={styles.metrics}>
-            <MetricCard label="Просмотры" value={fmtNum(summary.total_views)} sub={`${summary.total_videos || 0} роликов`} />
+            <MetricCard label="Просмотры" value={fmtNum(summary.total_views)} sub={`${totalVideos} роликов`} />
             <MetricCard label="Лайки" value={fmtNum(summary.total_likes)} />
             <MetricCard label="Комментарии" value={fmtNum(summary.total_comments)} />
             <MetricCard label="Сохранения" value={fmtNum(summary.total_saves)} />
