@@ -1,4 +1,5 @@
 const BASE = '/api';
+let currentWorkspaceId = null;
 
 async function req(method, path, body, adminPwd) {
   const headers = {};
@@ -6,9 +7,12 @@ async function req(method, path, body, adminPwd) {
   const storedPwd = sessionStorage.getItem('funnel_admin_pwd');
   const pwd = adminPwd || storedPwd;
   if (pwd) headers['x-admin-password'] = pwd;
+  if (currentWorkspaceId) headers['x-workspace-id'] = currentWorkspaceId;
+
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers,
+    credentials: 'include', // важно для сессий
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json();
@@ -17,6 +21,21 @@ async function req(method, path, body, adminPwd) {
 }
 
 export const api = {
+  setWorkspace(id) { currentWorkspaceId = id; },
+
+  // Auth
+  getMe: () => req('GET', '/auth/me'),
+  logout: () => req('POST', '/auth/logout'),
+
+  // Workspaces
+  createWorkspace: (body) => req('POST', '/workspaces', body),
+  getWorkspace: (id) => req('GET', `/workspaces/${id}`),
+  getMembers: (wsId) => req('GET', `/workspaces/${wsId}/members`),
+  createInvite: (wsId, body) => req('POST', `/workspaces/${wsId}/invites`, body),
+  joinWorkspace: (token) => req('POST', `/workspaces/join/${token}`),
+  updateMember: (wsId, userId, body) => req('PUT', `/workspaces/${wsId}/members/${userId}`, body),
+  removeMember: (wsId, userId) => req('DELETE', `/workspaces/${wsId}/members/${userId}`),
+
   // Posts
   getPosts: (params = {}) => {
     const q = new URLSearchParams(Object.entries(params).filter(([,v]) => v)).toString();
