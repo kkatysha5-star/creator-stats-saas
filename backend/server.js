@@ -1,26 +1,58 @@
 import express from 'express';
 import cors from 'cors';
+import session from 'express-session';
+import cookieParser from 'cookie-parser';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import 'dotenv/config';
 
 import { initDB } from './db.js';
+import passport from './config/auth.js';
+import { attachWorkspace } from './middleware/auth.js';
+
+import authRouter from './routes/auth.js';
+import workspacesRouter from './routes/workspaces.js';
 import creatorsRouter from './routes/creators.js';
 import videosRouter from './routes/videos.js';
 import statsRouter from './routes/stats.js';
 import postsRouter from './routes/posts.js';
-import { setupCron } from './cron.js';
 import funnelRouter from './routes/funnel.js';
+import { setupCron } from './cron.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+}));
+
+app.use(cookieParser());
 app.use(express.json());
 
-// Init DB then start
+// Сессии для Passport
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
+  }
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(attachWorkspace);
+
 initDB().then(() => {
+  // Публичные роуты
+  app.use('/api/auth', authRouter);
+  app.use('/api/workspaces', workspacesRouter);
+
+  // Данные (требуют workspace_id в заголовке)
   app.use('/api/creators', creatorsRouter);
   app.use('/api/videos', videosRouter);
   app.use('/api/stats', statsRouter);

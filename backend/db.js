@@ -105,5 +105,62 @@ export async function initDB() {
   try { await db.execute('ALTER TABLE creators ADD COLUMN reach_plan INTEGER DEFAULT 0'); } catch {}
   try { await db.execute('ALTER TABLE creators ADD COLUMN daily_rate INTEGER DEFAULT 0'); } catch {}
 
+  // Таблица пользователей
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      google_id TEXT UNIQUE,
+      email TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      avatar TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Воркспейсы (один КЗ = один воркспейс)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS workspaces (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      owner_id INTEGER NOT NULL,
+      plan TEXT DEFAULT 'free',
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Члены воркспейса с ролями
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS workspace_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      workspace_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      role TEXT NOT NULL DEFAULT 'creator',
+      joined_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(workspace_id, user_id)
+    )
+  `);
+
+  // Инвайты
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS invites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      workspace_id INTEGER NOT NULL,
+      role TEXT DEFAULT 'creator',
+      token TEXT UNIQUE NOT NULL,
+      used INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Добавляем workspace_id в существующие таблицы
+  try { await db.execute('ALTER TABLE creators ADD COLUMN workspace_id INTEGER DEFAULT 1'); } catch {}
+  try { await db.execute('ALTER TABLE posts ADD COLUMN workspace_id INTEGER DEFAULT 1'); } catch {}
+  try { await db.execute('ALTER TABLE videos ADD COLUMN workspace_id INTEGER DEFAULT 1'); } catch {}
+  try { await db.execute('ALTER TABLE funnel_periods ADD COLUMN workspace_id INTEGER DEFAULT 1'); } catch {}
+
   console.log('Database initialized');
 }
