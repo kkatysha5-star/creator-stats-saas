@@ -208,6 +208,18 @@ function CreatorRow({ creator: c, maxViews, activePlatforms, onOpen, showVideoPl
   const videoPct = monthPlan > 0 ? Math.min(Math.round((c.total_videos || 0) / monthPlan * 100), 100) : null;
   const reachPct = c.reach_plan > 0 ? Math.min(Math.round((c.total_views || 0) / c.reach_plan * 100), 100) : null;
 
+  // Считаем сколько роликов должно быть к сегодня (по дате старта)
+  let expectedByNow = null;
+  let behindBy = null;
+  if (monthPlan > 0 && c.period_start) {
+    const start = new Date(c.period_start);
+    const today = new Date();
+    const daysTotal = 30; // месяц
+    const daysPassed = Math.max(0, Math.min(Math.floor((today - start) / 86400000), daysTotal));
+    expectedByNow = Math.round(monthPlan * daysPassed / daysTotal);
+    behindBy = expectedByNow - (c.total_videos || 0); // > 0 = отстаёт
+  }
+
   return (
     <div className={styles.tableRow}>
       <div className={styles.creatorCell} onClick={onOpen} style={{ cursor: 'pointer' }}>
