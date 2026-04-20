@@ -17,8 +17,32 @@ export default function Settings() {
   const [wsName, setWsName] = useState(workspace?.name || '');
   const [saving, setSaving] = useState(false);
   const [inviteUrl, setInviteUrl] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [inviteRole, setInviteRole] = useState('creator');
+  // Для настройки если не завершили онбординг
+  const [setupRole, setSetupRole] = useState('');
+  const [setupName, setSetupName] = useState('');
+  const [setupStep, setSetupStep] = useState(workspace ? 'done' : 'role');
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupError, setSetupError] = useState('');
+
+  const handleSetupRole = (r) => {
+    setSetupRole(r);
+    if (r === 'owner') setSetupStep('create');
+    else setSetupStep('waiting');
+  };
+
+  const handleSetupCreate = async () => {
+    if (!setupName.trim()) return setSetupError('Введите название');
+    setSetupLoading(true);
+    try {
+      await api.createWorkspace({ name: setupName });
+      window.location.href = '/';
+    } catch (e) {
+      setSetupError(e.message);
+    } finally {
+      setSetupLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (workspace?.id) {
@@ -55,6 +79,56 @@ export default function Settings() {
 
       <div className={styles.sections}>
 
+        {/* Незавершённая настройка */}
+        {setupStep !== 'done' && (
+          <div className={styles.section} style={{ border: '1px solid var(--accent)', background: 'var(--accent-bg)' }}>
+            <h2 className={styles.sectionTitle} style={{ color: 'var(--accent)' }}>⚠️ Завершите настройку</h2>
+
+            {setupStep === 'role' && (
+              <>
+                <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 12 }}>Выберите свою роль чтобы начать работу</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { value: 'owner', label: '🏭 Владелец контент-завода', desc: 'Управляю командой креаторов, слежу за статистикой и продажами' },
+                    { value: 'creator', label: '🎬 Креатор', desc: 'Снимаю видео, жду приглашения от владельца КЗ' },
+                  ].map(r => (
+                    <button key={r.value} className={styles.roleBtn} onClick={() => handleSetupRole(r.value)}>
+                      <span className={styles.roleBtnLabel}>{r.label}</span>
+                      <span className={styles.roleBtnDesc}>{r.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {setupStep === 'create' && (
+              <>
+                <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 12 }}>Введите название вашего контент-завода</p>
+                <Input
+                  label="Название"
+                  placeholder="например: КЗ Анастасии"
+                  value={setupName}
+                  onChange={e => setSetupName(e.target.value)}
+                />
+                {setupError && <p style={{ color: '#ff5050', fontSize: 12 }}>{setupError}</p>}
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <Btn onClick={() => setSetupStep('role')}>← Назад</Btn>
+                  <Btn variant="primary" onClick={handleSetupCreate} loading={setupLoading}>Создать →</Btn>
+                </div>
+              </>
+            )}
+
+            {setupStep === 'waiting' && (
+              <>
+                <p style={{ fontSize: 13, color: 'var(--text2)' }}>
+                  Вы выбрали роль Креатора. Попросите владельца КЗ отправить вам инвайт-ссылку.
+                </p>
+                <Btn onClick={() => setSetupStep('role')} style={{ marginTop: 8 }}>← Изменить роль</Btn>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Профиль */}
         <div className={styles.section}>
           <h2 className={styles.sectionTitle}>Профиль</h2>
@@ -68,7 +142,16 @@ export default function Settings() {
               <div className={styles.profileEmail}>{user?.email}</div>
             </div>
           </div>
-          <Btn onClick={handleLogout} style={{ marginTop: 12 }}>Выйти из аккаунта</Btn>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            <Btn onClick={handleLogout}>Выйти из аккаунта</Btn>
+            <Btn onClick={() => {
+              const role = workspace?.role;
+              if (role) localStorage.removeItem('tutorial_seen_v1_' + role);
+              window.location.reload();
+            }}>
+              📖 Показать обучение снова
+            </Btn>
+          </div>
         </div>
 
         {/* Воркспейс */}
@@ -143,30 +226,7 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Опасная зона */}
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle} style={{ color: '#f87171' }}>Опасная зона</h2>
-          <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 12 }}>
-            Если вы выбрали роль по ошибке или хотите начать заново — выйдите и войдите снова. При следующем входе вы снова увидите выбор роли.
-          </p>
-          {!showDeleteConfirm ? (
-            <Btn onClick={() => setShowDeleteConfirm(true)} style={{ borderColor: 'rgba(248,113,113,.3)', color: '#f87171' }}>
-              Выйти и начать заново
-            </Btn>
-          ) : (
-            <div className={styles.confirmBlock}>
-              <p style={{ fontSize: 13, color: '#f87171', marginBottom: 8 }}>
-                Вы уверены? Вы выйдете из аккаунта и при следующем входе увидите выбор роли.
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Btn onClick={() => setShowDeleteConfirm(false)}>Отмена</Btn>
-                <Btn onClick={handleDeleteWorkspace} style={{ borderColor: 'rgba(248,113,113,.3)', color: '#f87171' }}>
-                  Да, выйти
-                </Btn>
-              </div>
-            </div>
-          )}
-        </div>
+
 
       </div>
     </div>

@@ -9,6 +9,7 @@ import Funnel from './pages/Funnel.jsx';
 import Login from './pages/Login.jsx';
 import Settings from './pages/Settings.jsx';
 import Welcome from './pages/Welcome.jsx';
+import Tutorial, { useTutorial } from './components/Tutorial.jsx';
 import Onboarding from './pages/Onboarding.jsx';
 import { api } from './lib/api.js';
 import './App.css';
@@ -63,6 +64,7 @@ function AppLayout({ auth }) {
   const role = workspace?.role;
   const isOwner = role === 'owner';
   const isManager = role === 'manager' || isOwner;
+  const [showTutorial, closeTutorial] = useTutorial(role);
 
   return (
     <div className="app-layout">
@@ -106,6 +108,7 @@ function AppLayout({ auth }) {
           </NavLink>
         </div>
       </aside>
+      {showTutorial && <Tutorial role={role} onClose={closeTutorial} />}
       <main className="main-content">
         <Routes>
           <Route path="/" element={<Dashboard />} />

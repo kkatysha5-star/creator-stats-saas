@@ -1,0 +1,131 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+  padding: 16px;
+}
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 36px 32px 28px;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: fadeIn .2s ease;
+  position: relative;
+}
+
+.progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--bg4);
+  cursor: pointer;
+  transition: all .2s;
+}
+.dotActive { background: var(--accent); width: 24px; border-radius: 4px; }
+.dotDone { background: var(--accent); opacity: 0.4; }
+
+.icon { font-size: 52px; margin-bottom: -4px; }
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.4px;
+  text-align: center;
+}
+
+.text {
+  font-size: 14px;
+  color: var(--text2);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.tip {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--accent-bg);
+  border: 1px solid rgba(124,108,252,0.2);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.5;
+  width: 100%;
+}
+.tipIcon { flex-shrink: 0; }
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.skipBtn {
+  background: transparent;
+  border: none;
+  color: var(--text3);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font);
+  padding: 6px 0;
+}
+.skipBtn:hover { color: var(--text2); }
+
+.prevBtn {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text2);
+  font-size: 13px;
+  font-family: var(--font);
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.prevBtn:hover { background: var(--bg3); }
+
+.nextBtn {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font);
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.nextBtn:hover { opacity: 0.88; }
+
+.counter {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+  margin-top: -8px;
+}
+
+@media (max-width: 480px) {
+  .modal { padding: 28px 20px 22px; }
+  .title { font-size: 19px; }
+}
