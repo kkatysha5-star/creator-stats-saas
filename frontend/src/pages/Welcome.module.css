@@ -1,0 +1,91 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 24px;
+}
+
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+}
+
+.logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.logoText { font-size: 22px; font-weight: 700; color: var(--text); }
+.stepIcon { font-size: 48px; }
+
+.title { font-size: 24px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; text-align: center; }
+.sub { font-size: 14px; color: var(--text3); text-align: center; margin-top: -8px; }
+
+.back {
+  position: absolute;
+  top: 20px; left: 20px;
+  background: transparent; border: none;
+  color: var(--text3); font-size: 13px; cursor: pointer;
+  font-family: var(--font);
+}
+.back:hover { color: var(--text); }
+
+.roles { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 4px; }
+
+.roleCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: all .15s;
+  width: 100%;
+}
+.roleCard:hover { border-color: var(--accent); background: var(--accent-bg); }
+
+.roleIcon { font-size: 28px; flex-shrink: 0; }
+.roleTitle { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.roleDesc { font-size: 12px; color: var(--text3); line-height: 1.4; }
+.roleArrow { font-size: 18px; color: var(--text3); margin-left: auto; flex-shrink: 0; }
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text2);
+  background: var(--bg3);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+.step span {
+  width: 22px; height: 22px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .card { padding: 28px 20px; }
+}

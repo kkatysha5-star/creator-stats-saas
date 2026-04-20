@@ -8,6 +8,7 @@ import CreatorDashboard from './pages/CreatorDashboard.jsx';
 import Funnel from './pages/Funnel.jsx';
 import Login from './pages/Login.jsx';
 import Settings from './pages/Settings.jsx';
+import Welcome from './pages/Welcome.jsx';
 import Onboarding from './pages/Onboarding.jsx';
 import { api } from './lib/api.js';
 import './App.css';
@@ -44,7 +45,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={!auth ? <Login /> : <Navigate to="/" />} />
-          <Route path="/onboarding" element={auth && auth.workspaces?.length === 0 ? <Onboarding /> : <Navigate to="/" />} />
+          <Route path="/onboarding" element={auth && auth.workspaces?.length === 0 ? <Welcome /> : <Navigate to="/" />} />
           <Route path="/invite/:token" element={<InviteHandler />} />
           <Route path="/*" element={
             !auth ? <Navigate to="/login" /> :
