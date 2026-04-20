@@ -23,8 +23,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Railway работает за прокси
+app.set('trust proxy', 1);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin: process.env.FRONTEND_URL || true,
   credentials: true,
 }));
 
@@ -37,8 +40,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     httpOnly: true,
+    sameSite: 'none',
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
   }
 }));
