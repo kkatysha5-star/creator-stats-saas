@@ -7,8 +7,10 @@ const router = Router();
 router.get('/summary', async (req, res) => {
   try {
     const { from, to, platform, creator_id } = req.query;
+    const wsId = req.workspaceId || req.query.workspace_id;
     let filter = 'WHERE 1=1';
     const args = [];
+    if (wsId) { filter += ' AND v.workspace_id = ?'; args.push(wsId); }
     if (creator_id) { filter += ' AND v.creator_id = ?'; args.push(creator_id); }
     if (platform) { filter += ' AND v.platform = ?'; args.push(platform); }
     if (from) { filter += ' AND v.published_at >= ?'; args.push(from); }
@@ -39,8 +41,10 @@ router.get('/summary', async (req, res) => {
 router.get('/by-creator', async (req, res) => {
   try {
     const { from, to, platform } = req.query;
+    const wsId = req.workspaceId || req.query.workspace_id;
     let filter = 'WHERE 1=1';
     const args = [];
+    if (wsId) { filter += ' AND (v.workspace_id = ? OR v.workspace_id IS NULL)'; args.push(wsId); }
     if (platform) { filter += ' AND v.platform = ?'; args.push(platform); }
     if (from) { filter += ' AND v.published_at >= ?'; args.push(from); }
     if (to) { filter += ' AND v.published_at <= ?'; args.push(to); }

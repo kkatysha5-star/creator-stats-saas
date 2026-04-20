@@ -7,8 +7,10 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const { creator_id, from, to } = req.query;
+    const wsId = req.workspaceId || req.query.workspace_id;
     let filter = 'WHERE 1=1';
     const args = [];
+    if (wsId) { filter += ' AND p.workspace_id = ?'; args.push(wsId); }
     if (creator_id) { filter += ' AND p.creator_id = ?'; args.push(creator_id); }
     if (from) { filter += ' AND p.published_at >= ?'; args.push(from); }
     if (to) { filter += ' AND p.published_at <= ?'; args.push(to); }
@@ -81,7 +83,8 @@ router.post('/', async (req, res) => {
     const platform = detectPlatform(url);
     if (!platform) return res.status(400).json({ error: 'Unsupported platform URL' });
 
-    const postResult = await db.execute({ sql: 'INSERT INTO posts (creator_id, published_at) VALUES (?, ?)', args: [creator_id, published_at || null] });
+    const wsId = req.workspaceId || req.body.workspace_id;
+    const postResult = await db.execute({ sql: 'INSERT INTO posts (creator_id, published_at, workspace_id) VALUES (?, ?, ?)', args: [creator_id, published_at || null, wsId || 1] });
     const postId = postResult.lastInsertRowid;
 
     const video_id = extractVideoId(url, platform);

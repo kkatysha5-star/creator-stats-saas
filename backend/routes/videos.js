@@ -7,8 +7,10 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const { creator_id, platform, from, to } = req.query;
+    const wsId = req.workspaceId || req.query.workspace_id;
     let filter = 'WHERE 1=1';
     const args = [];
+    if (wsId) { filter += ' AND v.workspace_id = ?'; args.push(wsId); }
     if (creator_id) { filter += ' AND v.creator_id = ?'; args.push(creator_id); }
     if (platform) { filter += ' AND v.platform = ?'; args.push(platform); }
     if (from) { filter += ' AND v.published_at >= ?'; args.push(from); }
@@ -41,7 +43,8 @@ router.post('/', async (req, res) => {
     if (!platform) return res.status(400).json({ error: 'Cannot detect platform' });
     const video_id = extractVideoId(url, platform);
 
-    const result = await db.execute({ sql: 'INSERT INTO videos (creator_id, platform, url, video_id, title, published_at) VALUES (?, ?, ?, ?, ?, ?)', args: [creator_id, platform, url, video_id || null, title || null, published_at || null] });
+    const wsId = req.workspaceId || req.body.workspace_id;
+    const result = await db.execute({ sql: 'INSERT INTO videos (creator_id, platform, url, video_id, title, published_at, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [creator_id, platform, url, video_id || null, title || null, published_at || null, wsId || 1] });
     const videoDbId = result.lastInsertRowid;
 
     const videoRow = await db.execute({ sql: 'SELECT * FROM videos WHERE id = ?', args: [videoDbId] });
