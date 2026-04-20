@@ -173,7 +173,7 @@ export default function Dashboard() {
                     const hasVideoPlan = filteredCreators.some(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0);
                     const hasReachPlan = filteredCreators.some(c => c.reach_plan > 0);
                     const extraCols = (hasVideoPlan ? ' 120px' : '') + (hasReachPlan ? ' 120px' : '');
-                    const gridCols = `200px 130px${extraCols} 180px 100px 100px 80px 80px 80px`;
+                    const gridCols = `200px 130px${extraCols} 180px 100px 100px 80px 80px`;
                     return (
                       <>
                         <div className={styles.tableHead} style={{ gridTemplateColumns: gridCols }}>
@@ -184,7 +184,6 @@ export default function Dashboard() {
                           <span>Просмотры</span>
                           <span>Лайки</span>
                           <span>Коммент.</span>
-                          <span>Сохр.</span>
                           <span>Репосты</span>
                           <span>ER</span>
                         </div>
@@ -219,16 +218,24 @@ function CreatorRow({ creator: c, maxViews, activePlatforms, onOpen, showVideoPl
   const videoPct = monthPlan > 0 ? Math.min(Math.round((c.total_videos || 0) / monthPlan * 100), 100) : null;
   const reachPct = c.reach_plan > 0 ? Math.min(Math.round((c.total_views || 0) / c.reach_plan * 100), 100) : null;
 
+  // Дневной план
+  const dayPlan = c.video_plan_period === 'day' ? (c.video_plan_count || 0) : null;
+
   // Считаем сколько роликов должно быть к сегодня (по дате старта)
   let expectedByNow = null;
   let behindBy = null;
-  if (monthPlan > 0 && c.period_start) {
+  if (c.period_start) {
     const start = new Date(c.period_start);
     const today = new Date();
-    const daysTotal = 30; // месяц
-    const daysPassed = Math.max(0, Math.min(Math.floor((today - start) / 86400000), daysTotal));
-    expectedByNow = Math.round(monthPlan * daysPassed / daysTotal);
-    behindBy = expectedByNow - (c.total_videos || 0); // > 0 = отстаёт
+    const daysPassed = Math.max(0, Math.floor((today - start) / 86400000));
+    if (c.video_plan_period === 'day' && c.video_plan_count > 0) {
+      expectedByNow = (c.video_plan_count || 0) * daysPassed;
+    } else if (monthPlan > 0) {
+      expectedByNow = Math.round(monthPlan * Math.min(daysPassed, 30) / 30);
+    }
+    if (expectedByNow !== null) {
+      behindBy = expectedByNow - (c.total_videos || 0);
+    }
   }
 
   return (
@@ -246,7 +253,6 @@ function CreatorRow({ creator: c, maxViews, activePlatforms, onOpen, showVideoPl
       <span className={styles.mono}>{fmtNum(c.total_views)}</span>
       <span className={styles.mono}>{fmtNum(c.total_likes)}</span>
       <span className={styles.mono}>{fmtNum(c.total_comments)}</span>
-      <span className={styles.mono}>{c.total_saves ? fmtNum(c.total_saves) : <span className={styles.na}>—</span>}</span>
       <span className={styles.mono}>{c.total_shares ? fmtNum(c.total_shares) : <span className={styles.na}>—</span>}</span>
       <span className={[styles.mono, styles.erVal].join(' ')}>{fmtEr(c.avg_er)}</span>
     </div>

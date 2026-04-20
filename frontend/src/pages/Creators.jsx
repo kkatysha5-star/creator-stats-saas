@@ -60,8 +60,9 @@ export default function Creators() {
                         <div className={styles.planItem}>
                           <span className={styles.planLabel}>🎬 План роликов</span>
                           <span className={styles.planVal}>
-                            {c.video_plan_count} / {c.video_plan_period === 'week' ? 'нед' : 'мес'}
+                            {c.video_plan_count} / {c.video_plan_period === 'day' ? 'день' : c.video_plan_period === 'week' ? 'нед' : 'мес'}
                             {c.video_plan_period === 'week' && <span className={styles.planSub}> ({monthPlan}/мес)</span>}
+                            {c.video_plan_period === 'day' && <span className={styles.planSub}> (~{(c.video_plan_count||0)*30}/мес)</span>}
                           </span>
                         </div>
                       )}
@@ -135,6 +136,8 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
 
   const monthEquiv = videoPlanPeriod === 'week' && videoPlanCount
     ? `= ${parseInt(videoPlanCount) * 4} роликов в месяц`
+    : videoPlanPeriod === 'day' && videoPlanCount
+    ? `= ~${parseInt(videoPlanCount) * 30} роликов в месяц`
     : null;
 
   return (
@@ -161,6 +164,7 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
               outline: 'none', flexShrink: 0, cursor: 'pointer'
             }}
           >
+            <option value="day">в день</option>
             <option value="week">в неделю</option>
             <option value="month">в месяц</option>
           </select>
