@@ -5,23 +5,114 @@ import { Btn, Input } from '../components/UI.jsx';
 import styles from './Login.module.css';
 
 export default function Onboarding() {
+  const [step, setStep] = useState('role'); // role | create
+  const [role, setRole] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  const handleRoleSelect = (r) => {
+    setRole(r);
+    if (r === 'creator') {
+      setStep('waiting');
+    } else {
+      setStep('create');
+    }
+  };
+
   const handleCreate = async () => {
-    if (!name.trim()) return setError('Введите название контент-завода');
+    if (!name.trim()) return setError('Введите название');
     setLoading(true);
     try {
-      const ws = await api.createWorkspace({ name });
-      navigate('/');
+      await api.createWorkspace({ name });
+      window.location.href = '/'; // полная перезагрузка чтобы обновить auth
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
   };
+
+  if (step === 'role') {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.logo}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="2" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.9"/>
+              <rect x="13" y="2" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.5"/>
+              <rect x="2" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.5"/>
+              <rect x="13" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.7"/>
+            </svg>
+            <span className={styles.logoText}>Creator Stats</span>
+          </div>
+
+          <h1 className={styles.title}>Кто вы?</h1>
+          <p className={styles.sub}>Выберите свою роль</p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', marginTop: 8 }}>
+            <button
+              onClick={() => handleRoleSelect('owner')}
+              style={{
+                background: 'var(--bg3)', border: '1px solid var(--border2)',
+                borderRadius: 'var(--radius)', padding: '16px 20px',
+                cursor: 'pointer', textAlign: 'left', transition: 'all .15s',
+                color: 'var(--text)',
+              }}
+              onMouseOver={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+              onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border2)'}
+            >
+              <div style={{ fontSize: 20, marginBottom: 4 }}>🏭</div>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>Владелец контент-завода</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
+                Управляю командой креаторов, слежу за статистикой и продажами
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleRoleSelect('creator')}
+              style={{
+                background: 'var(--bg3)', border: '1px solid var(--border2)',
+                borderRadius: 'var(--radius)', padding: '16px 20px',
+                cursor: 'pointer', textAlign: 'left', transition: 'all .15s',
+                color: 'var(--text)',
+              }}
+              onMouseOver={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+              onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border2)'}
+            >
+              <div style={{ fontSize: 20, marginBottom: 4 }}>🎬</div>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>Креатор</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>
+                Снимаю и публикую видео, жду приглашения от владельца КЗ
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'waiting') {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>⏳</div>
+          <h1 className={styles.title}>Ожидайте приглашения</h1>
+          <p className={styles.sub} style={{ textAlign: 'center' }}>
+            Попросите владельца контент-завода отправить вам инвайт-ссылку.
+            Как только вы перейдёте по ней — получите доступ к дашборду.
+          </p>
+          <button
+            onClick={() => setStep('role')}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', marginTop: 8 }}
+          >
+            ← Назад
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
@@ -52,9 +143,17 @@ export default function Onboarding() {
 
         {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
 
-        <Btn variant="primary" onClick={handleCreate} loading={loading} style={{ width: '100%' }}>
-          Создать и начать →
-        </Btn>
+        <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+          <button
+            onClick={() => setStep('role')}
+            style={{ background: 'transparent', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', color: 'var(--text3)', fontSize: 13, padding: '8px 16px', cursor: 'pointer' }}
+          >
+            ← Назад
+          </button>
+          <Btn variant="primary" onClick={handleCreate} loading={loading} style={{ flex: 1 }}>
+            Создать и начать →
+          </Btn>
+        </div>
       </div>
     </div>
   );
