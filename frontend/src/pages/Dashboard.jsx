@@ -169,29 +169,40 @@ export default function Dashboard() {
               ? <Empty text="Нет данных за выбранный период" sub="Добавьте видео на странице «Видео»" />
               : (
                 <div className={styles.creatorsTable}>
-                  <div className={styles.tableHead}>
-                    <span>Креатор</span>
-                    <span>Платформы / Роликов</span>
-                    {filteredCreators.some(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0) && <span>Ролики</span>}
-                    {filteredCreators.some(c => c.reach_plan > 0) && <span>Охваты</span>}
-                    <span>Просмотры</span>
-                    <span>Лайки</span>
-                    <span>Коммент.</span>
-                    <span>Сохр.</span>
-                    <span>Репосты</span>
-                    <span>ER</span>
-                  </div>
-                  {filteredCreators.map(c => (
-                    <CreatorRow
-                      key={c.creator_id}
-                      creator={c}
-                      maxViews={filteredCreators[0]?.total_views || 1}
-                      activePlatforms={platforms}
-                      onOpen={() => navigate(`/creator/${c.creator_id}`)}
-                      showVideoPlan={filteredCreators.some(cr => (cr.video_plan_period === 'week' ? (cr.video_plan_count||0)*4 : (cr.video_plan_count||0)) > 0)}
-                      showReachPlan={filteredCreators.some(cr => cr.reach_plan > 0)}
-                    />
-                  ))}
+                  {(() => {
+                    const hasVideoPlan = filteredCreators.some(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0);
+                    const hasReachPlan = filteredCreators.some(c => c.reach_plan > 0);
+                    const extraCols = (hasVideoPlan ? ' 120px' : '') + (hasReachPlan ? ' 120px' : '');
+                    const gridCols = `200px 130px${extraCols} 180px 100px 100px 80px 80px 80px`;
+                    return (
+                      <>
+                        <div className={styles.tableHead} style={{ gridTemplateColumns: gridCols }}>
+                          <span>Креатор</span>
+                          <span>Платф. / Роликов</span>
+                          {hasVideoPlan && <span>Ролики</span>}
+                          {hasReachPlan && <span>Охваты</span>}
+                          <span>Просмотры</span>
+                          <span>Лайки</span>
+                          <span>Коммент.</span>
+                          <span>Сохр.</span>
+                          <span>Репосты</span>
+                          <span>ER</span>
+                        </div>
+                        {filteredCreators.map(c => (
+                          <CreatorRow
+                            key={c.creator_id}
+                            creator={c}
+                            maxViews={filteredCreators[0]?.total_views || 1}
+                            activePlatforms={platforms}
+                            onOpen={() => navigate(`/creator/${c.creator_id}`)}
+                            showVideoPlan={hasVideoPlan}
+                            showReachPlan={hasReachPlan}
+                            gridCols={gridCols}
+                          />
+                        ))}
+                      </>
+                    );
+                  })()}
                 </div>
               )
             }
@@ -202,7 +213,7 @@ export default function Dashboard() {
   );
 }
 
-function CreatorRow({ creator: c, maxViews, activePlatforms, onOpen, showVideoPlan, showReachPlan }) {
+function CreatorRow({ creator: c, maxViews, activePlatforms, onOpen, showVideoPlan, showReachPlan, gridCols }) {
   const plats = c.platforms ? c.platforms.split(',').filter(p => activePlatforms.has(p)) : [];
   const monthPlan = c.video_plan_period === 'week' ? (c.video_plan_count || 0) * 4 : (c.video_plan_count || 0);
   const videoPct = monthPlan > 0 ? Math.min(Math.round((c.total_videos || 0) / monthPlan * 100), 100) : null;
@@ -221,7 +232,7 @@ function CreatorRow({ creator: c, maxViews, activePlatforms, onOpen, showVideoPl
   }
 
   return (
-    <div className={styles.tableRow}>
+    <div className={styles.tableRow} style={{ gridTemplateColumns: gridCols }}>
       <div className={styles.creatorCell} onClick={onOpen} style={{ cursor: 'pointer' }}>
         <Avatar name={c.creator_name} color={c.avatar_color} size={30} />
         <span className={styles.creatorName} style={{ color: 'var(--accent)' }}>{c.creator_name}</span>
