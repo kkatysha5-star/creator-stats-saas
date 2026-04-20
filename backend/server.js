@@ -7,6 +7,7 @@ import path from 'path';
 import 'dotenv/config';
 
 import { initDB } from './db.js';
+import { TursoSessionStore } from './session_store.js';
 import passport from './config/auth.js';
 import { attachWorkspace } from './middleware/auth.js';
 
@@ -36,6 +37,7 @@ app.use(express.json());
 
 // Сессии для Passport
 app.use(session({
+  store: new TursoSessionStore(),
   secret: process.env.SESSION_SECRET || 'dev-secret',
   resave: false,
   saveUninitialized: false,
