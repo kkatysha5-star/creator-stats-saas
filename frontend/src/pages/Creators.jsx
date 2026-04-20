@@ -35,22 +35,49 @@ export default function Creators() {
         ? <Empty icon="👤" text="Нет креаторов" sub="Добавьте первого креатора" />
         : (
           <div className={styles.grid + ' fade-in'}>
-            {creators.map(c => (
-              <div key={c.id} className={styles.card}>
-                <div className={styles.cardTop}>
-                  <Avatar name={c.name} color={c.avatar_color} size={44} />
-                  <div className={styles.cardInfo}>
-                    <p className={styles.name}>{c.name}</p>
-                    {c.username && <p className={styles.username}>@{c.username}</p>}
+            {creators.map(c => {
+              const monthPlan = c.video_plan_period === 'week'
+                ? (c.video_plan_count || 0) * 4
+                : (c.video_plan_count || 0);
+              return (
+                <div key={c.id} className={styles.card}>
+                  <div className={styles.cardTop}>
+                    <Avatar name={c.name} color={c.avatar_color} size={44} />
+                    <div className={styles.cardInfo}>
+                      <p className={styles.name}>{c.name}</p>
+                      {c.username && <p className={styles.username}>@{c.username}</p>}
+                    </div>
+                    <div className={styles.cardActions}>
+                      <button className={styles.iconBtn} onClick={() => setEditing(c)} title="Редактировать">✎</button>
+                      <button className={styles.iconBtn + ' ' + styles.del} onClick={() => handleDelete(c.id)} title="Удалить">✕</button>
+                    </div>
                   </div>
-                  <div className={styles.cardActions}>
-                    <button className={styles.iconBtn} onClick={() => setEditing(c)} title="Редактировать">✎</button>
-                    <button className={styles.iconBtn + ' ' + styles.del} onClick={() => handleDelete(c.id)} title="Удалить">✕</button>
-                  </div>
+
+                  {/* Планы */}
+                  {(monthPlan > 0 || c.reach_plan > 0) && (
+                    <div className={styles.plans}>
+                      {monthPlan > 0 && (
+                        <div className={styles.planItem}>
+                          <span className={styles.planLabel}>🎬 План роликов</span>
+                          <span className={styles.planVal}>
+                            {c.video_plan_count} / {c.video_plan_period === 'week' ? 'нед' : 'мес'}
+                            {c.video_plan_period === 'week' && <span className={styles.planSub}> ({monthPlan}/мес)</span>}
+                          </span>
+                        </div>
+                      )}
+                      {c.reach_plan > 0 && (
+                        <div className={styles.planItem}>
+                          <span className={styles.planLabel}>👁 План охватов</span>
+                          <span className={styles.planVal}>{fmtNum(c.reach_plan)}/мес</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className={styles.colorDot} style={{ background: c.avatar_color }} />
                 </div>
-                <div className={styles.colorDot} style={{ background: c.avatar_color }} />
-              </div>
-            ))}
+              );
+            })}
           </div>
         )
       }
@@ -80,6 +107,9 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
   const [name, setName] = useState(initial?.name || '');
   const [username, setUsername] = useState(initial?.username || '');
   const [color, setColor] = useState(initial?.avatar_color || colors[0]);
+  const [videoPlanCount, setVideoPlanCount] = useState(initial?.video_plan_count || '');
+  const [videoPlanPeriod, setVideoPlanPeriod] = useState(initial?.video_plan_period || 'month');
+  const [reachPlan, setReachPlan] = useState(initial?.reach_plan || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -87,20 +117,67 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
     if (!name.trim()) return setError('Введите имя');
     setLoading(true);
     try {
+      const data = {
+        name, username, avatar_color: color,
+        video_plan_count: parseInt(videoPlanCount) || 0,
+        video_plan_period: videoPlanPeriod,
+        reach_plan: parseInt(reachPlan) || 0,
+      };
       if (initial) {
-        await api.updateCreator(initial.id, { name, username, avatar_color: color });
+        await api.updateCreator(initial.id, data);
       } else {
-        await api.createCreator({ name, username, avatar_color: color });
+        await api.createCreator(data);
       }
       onSaved();
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
   };
 
+  const monthEquiv = videoPlanPeriod === 'week' && videoPlanCount
+    ? `= ${parseInt(videoPlanCount) * 4} роликов в месяц`
+    : null;
+
   return (
-    <Modal title={title} onClose={onClose} width={360}>
+    <Modal title={title} onClose={onClose} width={380}>
       <Input label="Имя" placeholder="Анна К." value={name} onChange={e => setName(e.target.value)} />
       <Input label="Username (необязательно)" placeholder="@username" value={username} onChange={e => setUsername(e.target.value)} />
+
+      {/* План роликов */}
+      <div>
+        <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6, fontWeight: 500 }}>🎬 План роликов</p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Input
+            placeholder="0"
+            type="number"
+            value={videoPlanCount}
+            onChange={e => setVideoPlanCount(e.target.value)}
+          />
+          <select
+            value={videoPlanPeriod}
+            onChange={e => setVideoPlanPeriod(e.target.value)}
+            style={{
+              background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)',
+              color: 'var(--text)', fontFamily: 'var(--font)', fontSize: 13, padding: '8px 10px',
+              outline: 'none', flexShrink: 0, cursor: 'pointer'
+            }}
+          >
+            <option value="week">в неделю</option>
+            <option value="month">в месяц</option>
+          </select>
+        </div>
+        {monthEquiv && <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{monthEquiv}</p>}
+      </div>
+
+      {/* План охватов */}
+      <Input
+        label="👁 План охватов в месяц (просмотры)"
+        placeholder="0"
+        type="number"
+        value={reachPlan}
+        onChange={e => setReachPlan(e.target.value)}
+      />
+
+      {/* Цвет */}
       <div>
         <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 8, fontWeight: 500 }}>Цвет аватара</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -117,6 +194,7 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
           ))}
         </div>
       </div>
+
       {name && <Avatar name={name} color={color} size={40} />}
       {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>

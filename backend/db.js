@@ -21,6 +21,9 @@ export async function initDB() {
       name TEXT NOT NULL,
       username TEXT,
       avatar_color TEXT DEFAULT '#6366f1',
+      video_plan_count INTEGER DEFAULT 0,
+      video_plan_period TEXT DEFAULT 'month',
+      reach_plan INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
@@ -95,6 +98,11 @@ export async function initDB() {
       FOREIGN KEY(period_id) REFERENCES funnel_periods(id) ON DELETE CASCADE
     )
   `);
+
+  // Добавляем новые колонки если их ещё нет (миграция)
+  try { await db.execute('ALTER TABLE creators ADD COLUMN video_plan_count INTEGER DEFAULT 0'); } catch {}
+  try { await db.execute('ALTER TABLE creators ADD COLUMN video_plan_period TEXT DEFAULT \'month\''); } catch {}
+  try { await db.execute('ALTER TABLE creators ADD COLUMN reach_plan INTEGER DEFAULT 0'); } catch {}
 
   console.log('Database initialized');
 }

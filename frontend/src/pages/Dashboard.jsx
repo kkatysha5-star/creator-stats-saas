@@ -67,6 +67,16 @@ export default function Dashboard() {
 
   const allViews = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (summaryByPlat[p]?.total_views || 0), 0);
 
+  // Суммарный план роликов и охватов по всем креаторам
+  const totalVideoPlan = byCreator.reduce((s, c) => {
+    const monthly = c.video_plan_period === 'week' ? (c.video_plan_count || 0) * 4 : (c.video_plan_count || 0);
+    return s + monthly;
+  }, 0);
+  const totalReachPlan = byCreator.reduce((s, c) => s + (c.reach_plan || 0), 0);
+  const totalVideos = summary.total_videos || 0;
+  const reachPct = totalReachPlan > 0 ? Math.min(Math.round(allViews / totalReachPlan * 100), 100) : null;
+  const videoPct = totalVideoPlan > 0 ? Math.min(Math.round(totalVideos / totalVideoPlan * 100), 100) : null;
+
 
 
   const filteredCreators = byCreator.filter(c => {
@@ -109,6 +119,20 @@ export default function Dashboard() {
             <MetricCard label="Комментарии" value={fmtNum(summary.total_comments)} />
             <MetricCard label="Сохранения" value={fmtNum(summary.total_saves)} />
             <MetricCard label="Репосты" value={fmtNum(summary.total_shares)} />
+            {videoPct !== null && (
+              <MetricCard
+                label="Ролики план/факт"
+                value={`${totalVideos} / ${totalVideoPlan}`}
+                sub={`${videoPct}% выполнения`}
+              />
+            )}
+            {reachPct !== null && (
+              <MetricCard
+                label="Охваты план/факт"
+                value={`${fmtNum(allViews)} / ${fmtNum(totalReachPlan)}`}
+                sub={`${reachPct}% выполнения`}
+              />
+            )}
           </div>
 
           {allViews > 0 && (
@@ -147,6 +171,8 @@ export default function Dashboard() {
                   <div className={styles.tableHead}>
                     <span>Креатор</span>
                     <span>Платформы / Роликов</span>
+                    <span>Ролики %</span>
+                    <span>Охваты %</span>
                     <span>Просмотры</span>
                     <span>Лайки</span>
                     <span>Коммент.</span>
@@ -168,8 +194,10 @@ export default function Dashboard() {
 }
 
 function CreatorRow({ creator: c, maxViews, activePlatforms, onOpen }) {
-  const barWidth = Math.round((c.total_views / maxViews) * 100);
   const plats = c.platforms ? c.platforms.split(',').filter(p => activePlatforms.has(p)) : [];
+  const monthPlan = c.video_plan_period === 'week' ? (c.video_plan_count || 0) * 4 : (c.video_plan_count || 0);
+  const videoPct = monthPlan > 0 ? Math.min(Math.round((c.total_videos || 0) / monthPlan * 100), 100) : null;
+  const reachPct = c.reach_plan > 0 ? Math.min(Math.round((c.total_views || 0) / c.reach_plan * 100), 100) : null;
 
   return (
     <div className={styles.tableRow}>

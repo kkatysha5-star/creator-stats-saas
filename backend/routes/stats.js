@@ -48,6 +48,7 @@ router.get('/by-creator', async (req, res) => {
     const result = await db.execute({ sql: `
       SELECT
         c.id as creator_id, c.name as creator_name, c.avatar_color,
+        c.video_plan_count, c.video_plan_period, c.reach_plan,
         COUNT(DISTINCT COALESCE(v.post_id, v.id)) as total_videos,
         GROUP_CONCAT(DISTINCT v.platform) as platforms,
         SUM(COALESCE(s.views, 0)) as total_views,

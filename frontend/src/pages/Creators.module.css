@@ -54,3 +54,21 @@
   /* Кнопки всегда видны на тач-устройствах */
   .cardActions { opacity: 1; }
 }
+
+.plans {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.planItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.planLabel { color: var(--text3); }
+.planVal { font-family: var(--mono); color: var(--text2); font-size: 12px; }
+.planSub { color: var(--text3); font-size: 11px; }
