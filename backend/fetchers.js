@@ -109,6 +109,10 @@ export async function fetchTiktokStats(videoId, originalUrl) {
 }
 
 // ─── Instagram via Apify ─────────────────────────────────────────────────────
+// Кэш: не дёргаем одно видео чаще раза в 12 часов — экономим кредиты Apify
+const instagramCache = new Map();
+const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 часов
+
 export function extractInstagramId(url) {
   const m = url.match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
   return m ? m[1] : null;
@@ -118,18 +122,28 @@ export async function fetchInstagramStats(shortcode, originalUrl) {
   const token = process.env.APIFY_API_TOKEN;
   if (!token) throw new Error('APIFY_API_TOKEN not set');
 
+  // Проверяем кэш
+  const cacheKey = shortcode || originalUrl;
+  const cached = instagramCache.get(cacheKey);
+  if (cached && (Date.now() - cached.fetchedAt) < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const postUrl = originalUrl || `https://www.instagram.com/reel/${shortcode}/`;
 
-  // Start Apify actor run
-  const runRes = await fetch('https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=' + token, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      directUrls: [postUrl],
-      resultsType: 'posts',
-      resultsLimit: 1,
-    }),
-  });
+  // Используем проверенный instagram-scraper с правильными полями
+  const runRes = await fetch(
+    'https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=' + token,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        directUrls: [postUrl],
+        resultsType: 'posts',
+        resultsLimit: 1,
+      }),
+    }
+  );
 
   if (!runRes.ok) throw new Error(`Apify API error: ${runRes.status}`);
   const items = await runRes.json();
@@ -137,7 +151,7 @@ export async function fetchInstagramStats(shortcode, originalUrl) {
   if (!items?.length) throw new Error('Instagram post not found via Apify');
 
   const post = items[0];
-  return {
+  const data = {
     title: (post.caption || post.alt || 'Instagram video').substring(0, 100),
     published_at: post.timestamp
       ? new Date(post.timestamp).toISOString().split('T')[0]
@@ -148,6 +162,11 @@ export async function fetchInstagramStats(shortcode, originalUrl) {
     saves: null,
     shares: null,
   };
+
+  // Сохраняем в кэш
+  instagramCache.set(cacheKey, { data, fetchedAt: Date.now() });
+
+  return data;
 }
 
 // ─── Universal dispatcher ─────────────────────────────────────────────────────
