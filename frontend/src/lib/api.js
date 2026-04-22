@@ -59,7 +59,7 @@ export const api = {
     return req('GET', `/videos${q ? '?' + q : ''}`);
   },
   addVideo: (body) => req('POST', '/videos', body),
-  refreshVideo: (id) => req('POST', `/videos/${id}/refresh`),
+  refreshVideo: (id) => req('POST', `/stats/refresh-video/${id}`),
   deleteVideo: (id) => req('DELETE', `/videos/${id}`),
 
   // Stats

@@ -150,3 +150,12 @@
     width: 32px; height: 32px; font-size: 15px;
   }
 }
+
+.refreshError {
+  font-size: 11px;
+  color: #f87171;
+  padding: 4px 12px 6px;
+  background: #fef2f2;
+  border-left: 3px solid #fca5a5;
+  margin: -2px 0 4px;
+}

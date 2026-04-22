@@ -26,6 +26,7 @@ export default function Videos() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [refreshingId, setRefreshingId] = useState(null);
+  const [refreshErrors, setRefreshErrors] = useState({});
 
   const load = useCallback(async () => {
     if (period === 'custom' && !customFrom && !customTo) return;
@@ -53,8 +54,15 @@ export default function Videos() {
 
   const handleRefresh = async (id) => {
     setRefreshingId(id);
-    try { await api.refreshVideo(id); await load(); } catch (e) { alert(e.message); }
-    finally { setRefreshingId(null); }
+    setRefreshErrors(prev => ({ ...prev, [id]: null }));
+    try {
+      await api.refreshVideo(id);
+      await load();
+    } catch (e) {
+      setRefreshErrors(prev => ({ ...prev, [id]: e.message }));
+    } finally {
+      setRefreshingId(null);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -108,6 +116,7 @@ export default function Videos() {
                 key={v.id}
                 video={v}
                 refreshing={refreshingId === v.id}
+                refreshError={refreshErrors[v.id]}
                 onRefresh={() => handleRefresh(v.id)}
                 onDelete={() => handleDelete(v.id)}
               />
@@ -127,7 +136,7 @@ export default function Videos() {
   );
 }
 
-function VideoRow({ video: v, refreshing, onRefresh, onDelete }) {
+function VideoRow({ video: v, refreshing, refreshError, onRefresh, onDelete }) {
   const statsUpdated = v.stats_updated_at
     ? new Date(v.stats_updated_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
     : '—';
@@ -161,6 +170,9 @@ function VideoRow({ video: v, refreshing, onRefresh, onDelete }) {
           <button className={styles.iconBtn + ' ' + styles.del} onClick={onDelete} title="Удалить">✕</button>
         </div>
       </div>
+      {refreshError && (
+        <div className={styles.refreshError}>{refreshError}</div>
+      )}
 
       {/* Мобильная карточка */}
       <div className={styles.mobileRow}>
@@ -253,3 +265,4 @@ function AddVideoModal({ creators, onClose, onSaved }) {
     </Modal>
   );
 }
+
