@@ -13,7 +13,6 @@ export default function Dashboard() {
   const [summaryByPlat, setSummaryByPlat] = useState({});
   const [byCreator, setByCreator] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const navigate = useNavigate();
 
   const load = useCallback(async () => {
@@ -47,10 +46,6 @@ export default function Dashboard() {
     });
   };
 
-  const handleRefreshAll = async () => {
-    setRefreshing(true);
-    try { await api.refreshAll(); await load(); } finally { setRefreshing(false); }
-  };
 
   const activePlats = ['youtube', 'tiktok', 'instagram'].filter(p => platforms.has(p));
   const summary = activePlats.reduce((acc, p) => {
@@ -88,7 +83,6 @@ export default function Dashboard() {
   return (
     <div className={styles.page}>
       <PageHeader title="Дашборд" subtitle="Сводная статистика по всем креаторам">
-        <Btn onClick={handleRefreshAll} loading={refreshing} small>↻ Обновить данные</Btn>
       </PageHeader>
 
       <div className={styles.toolbar}>
