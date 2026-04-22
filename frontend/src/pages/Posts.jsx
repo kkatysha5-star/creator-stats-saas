@@ -15,6 +15,8 @@ export default function Posts() {
   const [showAdd, setShowAdd] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [addingVideoTo, setAddingVideoTo] = useState(null);
+  const [refreshingIds, setRefreshingIds] = useState(new Set());
+  const [refreshErrors, setRefreshErrors] = useState({});
 
   const load = useCallback(async () => {
     if (period === 'custom' && !customFrom && !customTo) return;
@@ -45,6 +47,25 @@ export default function Posts() {
     load();
   };
 
+  const handleRefreshVideo = async (videoId) => {
+    setRefreshingIds(prev => new Set([...prev, videoId]));
+    setRefreshErrors(prev => ({ ...prev, [videoId]: null }));
+    try {
+      await api.refreshVideo(videoId);
+      await load();
+    } catch (e) {
+      setRefreshErrors(prev => ({ ...prev, [videoId]: e.message }));
+    } finally {
+      setRefreshingIds(prev => { const s = new Set(prev); s.delete(videoId); return s; });
+    }
+  };
+
+  const handleRefreshAll = async (videos) => {
+    for (const v of videos) {
+      await handleRefreshVideo(v.id);
+    }
+  };
+
   return (
     <div className={styles.page}>
       <PageHeader title="Ролики" subtitle={`${posts.length} роликов за выбранный период`}>
@@ -73,6 +94,10 @@ export default function Posts() {
                 onDelete={() => handleDeletePost(post.id)}
                 onAddVideo={() => setAddingVideoTo(post)}
                 onDeleteVideo={(videoId) => handleDeleteVideo(post.id, videoId)}
+                onRefreshVideo={handleRefreshVideo}
+                onRefreshAll={() => handleRefreshAll(post.videos)}
+                refreshingIds={refreshingIds}
+                refreshErrors={refreshErrors}
               />
             ))}
           </div>
@@ -97,7 +122,7 @@ export default function Posts() {
   );
 }
 
-function PostCard({ post, num, expanded, onToggle, onDelete, onAddVideo, onDeleteVideo }) {
+function PostCard({ post, num, expanded, onToggle, onDelete, onAddVideo, onDeleteVideo, onRefreshVideo, onRefreshAll, refreshingIds, refreshErrors }) {
   const { totals, videos } = post;
   const hasSaves = videos.some(v => v.saves != null);
   const hasShares = videos.some(v => v.shares != null);
@@ -128,6 +153,9 @@ function PostCard({ post, num, expanded, onToggle, onDelete, onAddVideo, onDelet
         </div>
 
         <div className={styles.cardActions} onClick={e => e.stopPropagation()}>
+          <button className={styles.iconBtn} onClick={onRefreshAll} title="Обновить все платформы" disabled={post.videos?.some(v => refreshingIds.has(v.id))}>
+            {post.videos?.some(v => refreshingIds.has(v.id)) ? '…' : '↻'}
+          </button>
           <button className={styles.iconBtn} onClick={onAddVideo} title="Добавить платформу">+</button>
           <button className={styles.iconBtn + ' ' + styles.del} onClick={onDelete} title="Удалить">✕</button>
           <span className={styles.chevron} style={{ transform: expanded ? 'rotate(180deg)' : '' }}>▾</span>
@@ -150,7 +178,18 @@ function PostCard({ post, num, expanded, onToggle, onDelete, onAddVideo, onDelet
                 {v.shares != null && <PlatStat label="репост" value={fmtNum(v.shares)} />}
                 <PlatStat label="ER" value={fmtEr(v.er)} accent />
               </div>
+              <button
+                className={styles.iconBtn}
+                onClick={() => onRefreshVideo(v.id)}
+                disabled={refreshingIds.has(v.id)}
+                title="Обновить статистику"
+              >
+                {refreshingIds.has(v.id) ? '…' : '↻'}
+              </button>
               <button className={styles.iconBtn + ' ' + styles.del} onClick={() => onDeleteVideo(v.id)} title="Удалить ссылку">✕</button>
+              {refreshErrors[v.id] && (
+                <span className={styles.refreshError}>{refreshErrors[v.id]}</span>
+              )}
             </div>
           ))}
           <button className={styles.addPlatBtn} onClick={onAddVideo}>

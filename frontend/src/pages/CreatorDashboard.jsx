@@ -62,6 +62,8 @@ export default function CreatorDashboard() {
 
   const [showAllVideos, setShowAllVideos] = useState(false);
   const [videoSort, setVideoSort] = useState('views');
+  const [refreshingIds, setRefreshingIds] = useState(new Set());
+  const [refreshErrors, setRefreshErrors] = useState({});
 
   // Топ видео по просмотрам
   const sortedVideos = [...videos].sort((a, b) => {
@@ -72,6 +74,19 @@ export default function CreatorDashboard() {
   });
   const topVideos = sortedVideos.slice(0, 5);
   const allVideos = sortedVideos;
+
+  const handleRefreshVideo = async (videoId) => {
+    setRefreshingIds(prev => new Set([...prev, videoId]));
+    setRefreshErrors(prev => ({ ...prev, [videoId]: null }));
+    try {
+      await api.refreshVideo(videoId);
+      await load();
+    } catch (e) {
+      setRefreshErrors(prev => ({ ...prev, [videoId]: e.message }));
+    } finally {
+      setRefreshingIds(prev => { const s = new Set(prev); s.delete(videoId); return s; });
+    }
+  };
 
   return (
     <div className={styles.page}>
@@ -210,6 +225,19 @@ export default function CreatorDashboard() {
                       <VStat label="Просм." value={fmtNum(v.views)} />
                       <VStat label="Лайки" value={fmtNum(v.likes)} />
                       <VStat label="ER" value={fmtEr(v.er)} accent />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                      <button
+                        onClick={() => handleRefreshVideo(v.id)}
+                        disabled={refreshingIds.has(v.id)}
+                        title="Обновить статистику"
+                        style={{ background: 'none', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', color: 'var(--text3)', fontSize: 13, padding: '2px 7px', cursor: 'pointer', opacity: refreshingIds.has(v.id) ? 0.5 : 1 }}
+                      >
+                        {refreshingIds.has(v.id) ? '…' : '↻'}
+                      </button>
+                      {refreshErrors[v.id] && (
+                        <span style={{ fontSize: 10, color: '#f87171', maxWidth: 120, textAlign: 'right' }}>{refreshErrors[v.id]}</span>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -103,3 +103,9 @@
   .platformRow { flex-wrap: wrap; gap: 6px; }
   .platStats { gap: 8px; flex-wrap: wrap; }
 }
+
+.refreshError {
+  font-size: 10px;
+  color: #f87171;
+  margin-left: 4px;
+}
