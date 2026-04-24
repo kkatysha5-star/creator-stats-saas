@@ -1,16 +1,31 @@
 import { db } from '../db.js';
 
-// Проверяем что пользователь залогинен
+export const PLAN_LIMITS = {
+  trial: { creators: 1,  funnel: false, label: 'Пробный' },
+  start: { creators: 5,  funnel: false, label: 'Start' },
+  pro:   { creators: 20, funnel: true,  label: 'Pro' },
+  free:  { creators: 1,  funnel: false, label: 'Free' },
+};
+
+export function isPlanActive(workspace) {
+  if (!workspace) return false;
+  if (workspace.plan === 'trial') {
+    if (!workspace.trial_ends_at) return false;
+    return new Date(workspace.trial_ends_at) > new Date();
+  }
+  // paid plans — always active (no expiry logic yet)
+  return true;
+}
+
 export function requireAuth(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Необходима авторизация' });
   next();
 }
 
-// Проверяем роль в текущем воркспейсе
 export function requireRole(roles) {
   return async (req, res, next) => {
     try {
-      const wsId = req.params.id || req.body.workspace_id || req.query.workspace_id;
+      const wsId = req.params.id || req.body.workspace_id || req.query.workspace_id || req.workspaceId;
       if (!wsId) return res.status(400).json({ error: 'workspace_id required' });
 
       const result = await db.execute({
@@ -31,7 +46,28 @@ export function requireRole(roles) {
   };
 }
 
-// Добавляем workspace_id и роль в каждый запрос
+// Блокирует запись если план истёк — только чтение
+export function requireActivePlan(req, res, next) {
+  if (!req.workspace) return res.status(403).json({ error: 'Нет активного плана' });
+  if (!isPlanActive(req.workspace)) {
+    return res.status(403).json({ error: 'trial_expired', message: 'Пробный период закончился. Данные доступны в режиме чтения.' });
+  }
+  next();
+}
+
+// Блокирует доступ к функциям недоступным на текущем плане
+export function requirePlanFeature(feature) {
+  return (req, res, next) => {
+    const workspace = req.workspace;
+    if (!workspace) return res.status(403).json({ error: 'Нет доступа' });
+    const limits = PLAN_LIMITS[workspace.plan] || PLAN_LIMITS.trial;
+    if (!limits[feature]) {
+      return res.status(403).json({ error: 'plan_feature_unavailable', message: `Функция недоступна на плане ${limits.label}. Перейдите на Pro.` });
+    }
+    next();
+  };
+}
+
 export async function attachWorkspace(req, res, next) {
   if (!req.user) return next();
 
@@ -40,13 +76,16 @@ export async function attachWorkspace(req, res, next) {
     if (!wsId) return next();
 
     const result = await db.execute({
-      sql: 'SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?',
+      sql: `SELECT w.*, wm.role FROM workspaces w
+            JOIN workspace_members wm ON wm.workspace_id = w.id
+            WHERE w.id = ? AND wm.user_id = ?`,
       args: [wsId, req.user.id]
     });
 
     if (result.rows.length) {
       req.workspaceId = parseInt(wsId);
       req.userRole = result.rows[0].role;
+      req.workspace = result.rows[0];
     }
     next();
   } catch (err) {

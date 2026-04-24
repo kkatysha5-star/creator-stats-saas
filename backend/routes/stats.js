@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { fetchStatsForVideo } from '../fetchers.js';
+import { requireAuth, requireActivePlan } from '../middleware/auth.js';
 
 const router = Router();
 
-// Кулдаун: не обновляем одно видео чаще раза в 12 часов
-const refreshCooldowns = new Map(); // video_id → timestamp последнего обновления
-const COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12 часов
+const refreshCooldowns = new Map();
+const COOLDOWN_MS = 12 * 60 * 60 * 1000;
 
 router.get('/summary', async (req, res) => {
   try {
@@ -82,7 +82,7 @@ router.get('/by-creator', async (req, res) => {
 });
 
 // Обновить одно видео — с кулдауном 12 часов
-router.post('/refresh-video/:id', async (req, res) => {
+router.post('/refresh-video/:id', requireAuth, requireActivePlan, async (req, res) => {
   try {
     const videoId = parseInt(req.params.id);
 
@@ -101,6 +101,12 @@ router.post('/refresh-video/:id', async (req, res) => {
     const video = result.rows[0];
     if (!video) return res.status(404).json({ error: 'Видео не найдено' });
 
+    // Проверяем что видео принадлежит воркспейсу пользователя
+    const wsId = req.workspaceId;
+    if (wsId && video.workspace_id && Number(video.workspace_id) !== wsId) {
+      return res.status(403).json({ error: 'Нет доступа к этому видео' });
+    }
+
     const stats = await fetchStatsForVideo(video);
     const er = stats.views > 0
       ? ((stats.likes + stats.comments + (stats.saves || 0)) / stats.views * 100)
@@ -111,6 +117,9 @@ router.post('/refresh-video/:id', async (req, res) => {
       args: [videoId, stats.views, stats.likes, stats.comments, stats.saves, stats.shares, er],
     });
 
+    // Очищаем ошибку при успехе
+    await db.execute({ sql: 'UPDATE videos SET last_error = NULL WHERE id = ?', args: [videoId] });
+
     if (stats.title) {
       await db.execute({
         sql: 'UPDATE videos SET title = ?, published_at = COALESCE(published_at, ?) WHERE id = ?',
@@ -118,16 +127,19 @@ router.post('/refresh-video/:id', async (req, res) => {
       });
     }
 
-    // Сохраняем время обновления
     refreshCooldowns.set(videoId, Date.now());
 
     res.json({ ok: true, stats });
   } catch (e) {
+    // Сохраняем ошибку в БД
+    try {
+      await db.execute({
+        sql: 'UPDATE videos SET last_error = ? WHERE id = ?',
+        args: [e.message, parseInt(req.params.id)]
+      });
+    } catch {}
     res.status(500).json({ error: e.message });
   }
 });
-
-// Убрали /refresh-all — слишком дорого для больших аккаунтов.
-// Массовое обновление делает только умный cron по расписанию.
 
 export default router;

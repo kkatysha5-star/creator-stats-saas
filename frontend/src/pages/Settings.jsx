@@ -5,6 +5,19 @@ import { api } from '../lib/api.js';
 import { PageHeader, Avatar, Btn, Input, Modal, Loader } from '../components/UI.jsx';
 import styles from './Settings.module.css';
 
+const PLAN_INFO = {
+  trial: { label: 'Пробный (7 дней)', creators: 1, funnel: false, price: 'Бесплатно' },
+  start: { label: 'Start', creators: 5, funnel: false, price: '1 990 ₽/мес' },
+  pro:   { label: 'Pro', creators: 20, funnel: true,  price: '3 990 ₽/мес' },
+  free:  { label: 'Free', creators: 1, funnel: false, price: 'Бесплатно' },
+};
+
+function trialDaysLeft(workspace) {
+  if (!workspace || workspace.plan !== 'trial' || !workspace.trial_ends_at) return null;
+  const diff = new Date(workspace.trial_ends_at) - new Date();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}
+
 export default function Settings() {
   const { auth, setAuth } = useAuth();
   const navigate = useNavigate();
@@ -13,12 +26,14 @@ export default function Settings() {
   const isOwner = workspace?.role === 'owner';
 
   const [members, setMembers] = useState([]);
+  const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [wsName, setWsName] = useState(workspace?.name || '');
-  const [saving, setSaving] = useState(false);
-  const [inviteUrl, setInviteUrl] = useState('');
   const [inviteRole, setInviteRole] = useState('creator');
-  // Для настройки если не завершили онбординг
+  const [inviteExpiry, setInviteExpiry] = useState('30');
+  const [inviteLabel, setInviteLabel] = useState('');
+  const [creatingInvite, setCreatingInvite] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
+
   const [setupRole, setSetupRole] = useState('');
   const [setupName, setSetupName] = useState('');
   const [setupStep, setSetupStep] = useState(workspace ? 'done' : 'role');
@@ -45,21 +60,45 @@ export default function Settings() {
   };
 
   useEffect(() => {
-    if (workspace?.id) {
-      api.getMembers(workspace.id)
-        .then(setMembers)
-        .catch(console.error)
-        .finally(() => setLoading(false));
-    }
-  }, [workspace?.id]);
+    if (!workspace?.id) { setLoading(false); return; }
+    Promise.all([
+      api.getMembers(workspace.id),
+      isOwner ? api.getInvites(workspace.id) : Promise.resolve([]),
+    ]).then(([m, inv]) => {
+      setMembers(m);
+      setInvites(inv);
+    }).catch(console.error).finally(() => setLoading(false));
+  }, [workspace?.id, isOwner]);
 
   const handleCreateInvite = async () => {
+    setCreatingInvite(true);
     try {
-      const result = await api.createInvite(workspace.id, { role: inviteRole });
-      setInviteUrl(result.url);
+      const result = await api.createInvite(workspace.id, {
+        role: inviteRole,
+        expires_days: parseInt(inviteExpiry),
+        label: inviteLabel.trim() || undefined,
+      });
+      setInvites(prev => [result, ...prev]);
+      setInviteLabel('');
     } catch (e) {
       alert(e.message);
+    } finally {
+      setCreatingInvite(false);
     }
+  };
+
+  const handleDeleteInvite = async (inviteId) => {
+    if (!confirm('Удалить эту ссылку?')) return;
+    try {
+      await api.deleteInvite(workspace.id, inviteId);
+      setInvites(prev => prev.filter(i => i.id !== inviteId));
+    } catch (e) { alert(e.message); }
+  };
+
+  const handleCopy = (inv) => {
+    navigator.clipboard.writeText(inv.url);
+    setCopiedId(inv.id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleLogout = async () => {
@@ -67,11 +106,9 @@ export default function Settings() {
     window.location.href = '/login';
   };
 
-  const handleDeleteWorkspace = async () => {
-    // Выходим и сбрасываем — пользователь попадёт на онбординг
-    await api.logout();
-    window.location.href = '/login';
-  };
+  const plan = workspace?.plan || 'trial';
+  const planInfo = PLAN_INFO[plan] || PLAN_INFO.trial;
+  const daysLeft = trialDaysLeft(workspace);
 
   return (
     <div className={styles.page}>
@@ -83,13 +120,12 @@ export default function Settings() {
         {setupStep !== 'done' && (
           <div className={styles.section} style={{ border: '1px solid var(--accent)', background: 'var(--accent-bg)' }}>
             <h2 className={styles.sectionTitle} style={{ color: 'var(--accent)' }}>⚠️ Завершите настройку</h2>
-
             {setupStep === 'role' && (
               <>
                 <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 12 }}>Выберите свою роль чтобы начать работу</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[
-                    { value: 'owner', label: '🏭 Владелец контент-завода', desc: 'Управляю командой креаторов, слежу за статистикой и продажами' },
+                    { value: 'owner', label: '🏭 Владелец контент-завода', desc: 'Управляю командой креаторов, слежу за статистикой' },
                     { value: 'creator', label: '🎬 Креатор', desc: 'Снимаю видео, жду приглашения от владельца КЗ' },
                   ].map(r => (
                     <button key={r.value} className={styles.roleBtn} onClick={() => handleSetupRole(r.value)}>
@@ -100,16 +136,10 @@ export default function Settings() {
                 </div>
               </>
             )}
-
             {setupStep === 'create' && (
               <>
                 <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 12 }}>Введите название вашего контент-завода</p>
-                <Input
-                  label="Название"
-                  placeholder="например: КЗ Анастасии"
-                  value={setupName}
-                  onChange={e => setSetupName(e.target.value)}
-                />
+                <Input label="Название" placeholder="например: КЗ Анастасии" value={setupName} onChange={e => setSetupName(e.target.value)} />
                 {setupError && <p style={{ color: '#ff5050', fontSize: 12 }}>{setupError}</p>}
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   <Btn onClick={() => setSetupStep('role')}>← Назад</Btn>
@@ -117,12 +147,9 @@ export default function Settings() {
                 </div>
               </>
             )}
-
             {setupStep === 'waiting' && (
               <>
-                <p style={{ fontSize: 13, color: 'var(--text2)' }}>
-                  Вы выбрали роль Креатора. Попросите владельца КЗ отправить вам инвайт-ссылку.
-                </p>
+                <p style={{ fontSize: 13, color: 'var(--text2)' }}>Вы выбрали роль Креатора. Попросите владельца КЗ отправить вам инвайт-ссылку.</p>
                 <Btn onClick={() => setSetupStep('role')} style={{ marginTop: 8 }}>← Изменить роль</Btn>
               </>
             )}
@@ -154,6 +181,50 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* Тариф */}
+        {workspace && (
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Тариф</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div>
+                <span style={{ fontWeight: 600, fontSize: 15 }}>{planInfo.label}</span>
+                <span style={{ color: 'var(--text3)', fontSize: 12, marginLeft: 8 }}>{planInfo.price}</span>
+              </div>
+              {daysLeft !== null && (
+                <span style={{ fontSize: 12, color: daysLeft === 0 ? '#ef4444' : daysLeft <= 2 ? '#f59e0b' : 'var(--text3)' }}>
+                  {daysLeft === 0 ? '🔒 Истёк' : `⏱ ${daysLeft} дн.`}
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text3)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span>Креаторы: до {planInfo.creators}</span>
+              <span>Воронка продаж: {planInfo.funnel ? '✅' : '❌'}</span>
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Доступные тарифы:</p>
+              {[
+                { key: 'start', label: 'Start', price: '1 990 ₽/мес', desc: '5 креаторов' },
+                { key: 'pro', label: 'Pro', price: '3 990 ₽/мес', desc: '20 креаторов + воронка' },
+              ].map(p => (
+                <div key={p.key} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: 'var(--bg3)', borderRadius: 'var(--radius-sm)',
+                  padding: '10px 14px', border: `1px solid ${workspace.plan === p.key ? 'var(--accent)' : 'var(--border)'}`,
+                }}>
+                  <div>
+                    <span style={{ fontWeight: 600, fontSize: 13 }}>{p.label}</span>
+                    <span style={{ color: 'var(--text3)', fontSize: 12, marginLeft: 8 }}>{p.desc}</span>
+                  </div>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{p.price}</span>
+                </div>
+              ))}
+              <p style={{ fontSize: 11, color: 'var(--text3)', margin: '4px 0 0' }}>
+                Для оплаты или смены тарифа — напишите нам
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Воркспейс */}
         {workspace && (
           <div className={styles.section}>
@@ -164,7 +235,7 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Команда — только для owner/manager */}
+        {/* Команда */}
         {isOwner && workspace && (
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Команда</h2>
@@ -189,46 +260,129 @@ export default function Settings() {
               </div>
             )}
 
-            {/* Инвайт */}
+            {/* Создание инвайта */}
             <div className={styles.inviteBlock}>
-              <h3 className={styles.inviteTitle}>Пригласить в команду</h3>
-              <div className={styles.inviteRoles}>
-                {[
-                  { value: 'creator', label: '🎬 Креатор', desc: 'Видит свои ролики и статистику' },
-                  { value: 'manager', label: '📋 Менеджер', desc: 'Видит всё, может редактировать' },
-                ].map(r => (
-                  <button
-                    key={r.value}
-                    className={styles.roleBtn + (inviteRole === r.value ? ' ' + styles.roleBtnActive : '')}
-                    onClick={() => setInviteRole(r.value)}
+              <h3 className={styles.inviteTitle}>Создать ссылку-приглашение</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className={styles.inviteRoles}>
+                  {[
+                    { value: 'creator', label: '🎬 Креатор', desc: 'Видит свои ролики' },
+                    { value: 'manager', label: '📋 Менеджер', desc: 'Может редактировать' },
+                    { value: 'owner', label: '👑 Владелец', desc: 'Полный доступ' },
+                  ].map(r => (
+                    <button
+                      key={r.value}
+                      className={styles.roleBtn + (inviteRole === r.value ? ' ' + styles.roleBtnActive : '')}
+                      onClick={() => setInviteRole(r.value)}
+                    >
+                      <span className={styles.roleBtnLabel}>{r.label}</span>
+                      <span className={styles.roleBtnDesc}>{r.desc}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select
+                    value={inviteExpiry}
+                    onChange={e => setInviteExpiry(e.target.value)}
+                    style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', color: 'var(--text2)', fontFamily: 'var(--font)', fontSize: 12, padding: '6px 10px', outline: 'none' }}
                   >
-                    <span className={styles.roleBtnLabel}>{r.label}</span>
-                    <span className={styles.roleBtnDesc}>{r.desc}</span>
-                  </button>
+                    <option value="30">30 дней</option>
+                    <option value="60">60 дней</option>
+                    <option value="90">90 дней</option>
+                  </select>
+                  <input
+                    placeholder="Название (необязательно)"
+                    value={inviteLabel}
+                    onChange={e => setInviteLabel(e.target.value)}
+                    style={{ flex: 1, minWidth: 120, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontFamily: 'var(--font)', fontSize: 12, padding: '6px 10px', outline: 'none' }}
+                  />
+                  <Btn variant="primary" onClick={handleCreateInvite} loading={creatingInvite} small>
+                    Создать
+                  </Btn>
+                </div>
+              </div>
+            </div>
+
+            {/* Список инвайтов */}
+            {invites.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Активные ссылки:</p>
+                {invites.map(inv => (
+                  <InviteCard
+                    key={inv.id}
+                    invite={inv}
+                    copied={copiedId === inv.id}
+                    onCopy={() => handleCopy(inv)}
+                    onDelete={() => handleDeleteInvite(inv.id)}
+                  />
                 ))}
               </div>
-              <Btn variant="primary" onClick={handleCreateInvite} small>
-                Создать ссылку-приглашение
-              </Btn>
-
-              {inviteUrl && (
-                <div className={styles.inviteUrl}>
-                  <span className={styles.inviteUrlText}>{inviteUrl}</span>
-                  <button
-                    className={styles.copyBtn}
-                    onClick={() => { navigator.clipboard.writeText(inviteUrl); alert('Скопировано!'); }}
-                  >
-                    Скопировать
-                  </button>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         )}
-
-
-
       </div>
+    </div>
+  );
+}
+
+function InviteCard({ invite, copied, onCopy, onDelete }) {
+  const [showJoiners, setShowJoiners] = useState(false);
+  const isExpired = invite.is_expired;
+  const expiresDate = invite.expires_at ? new Date(invite.expires_at).toLocaleDateString('ru-RU') : '—';
+  const roleLabel = { creator: '🎬 Креатор', manager: '📋 Менеджер', owner: '👑 Владелец' }[invite.role] || invite.role;
+
+  return (
+    <div style={{
+      background: 'var(--bg3)', borderRadius: 'var(--radius-sm)',
+      border: `1px solid ${isExpired ? '#7f1d1d' : 'var(--border)'}`,
+      padding: '10px 12px', marginBottom: 8, opacity: isExpired ? 0.6 : 1,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 600 }}>{invite.label || roleLabel}</span>
+        <span style={{ fontSize: 11, color: 'var(--text3)', background: 'var(--bg4)', padding: '1px 6px', borderRadius: 3 }}>{roleLabel}</span>
+        <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>
+          {isExpired ? '🔒 Истекла' : `до ${expiresDate}`}
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {invite.url}
+        </span>
+        <button
+          onClick={onCopy}
+          style={{ background: copied ? '#166534' : 'var(--bg4)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', color: copied ? '#4ade80' : 'var(--text2)', fontFamily: 'var(--font)', fontSize: 11, padding: '3px 10px', cursor: 'pointer', flexShrink: 0 }}
+        >
+          {copied ? '✓ Скопировано' : 'Копировать'}
+        </button>
+        <button
+          onClick={onDelete}
+          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 14, padding: '2px 4px', flexShrink: 0 }}
+          title="Удалить ссылку"
+        >
+          ✕
+        </button>
+      </div>
+      {invite.use_count > 0 && (
+        <div style={{ marginTop: 6 }}>
+          <button
+            onClick={() => setShowJoiners(!showJoiners)}
+            style={{ fontSize: 11, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            👥 Присоединилось: {invite.use_count} {showJoiners ? '▴' : '▾'}
+          </button>
+          {showJoiners && invite.joiners?.length > 0 && (
+            <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {invite.joiners.map((j, i) => (
+                <div key={i} style={{ fontSize: 11, color: 'var(--text2)', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{j.name} ({j.email})</span>
+                  <span style={{ color: 'var(--text3)' }}>{new Date(j.joined_at).toLocaleDateString('ru-RU')}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

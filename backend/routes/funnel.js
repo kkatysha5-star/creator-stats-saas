@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
+import { requireAuth, requireActivePlan, requirePlanFeature, PLAN_LIMITS } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -8,8 +9,22 @@ function isAdmin(req) {
   return req.headers['x-admin-password'] === process.env.ADMIN_PASSWORD;
 }
 
+// Middleware: проверяем план (воронка только на Pro)
+function checkFunnelAccess(req, res, next) {
+  const workspace = req.workspace;
+  if (!workspace) return next(); // нет workspace — пускаем (обратная совместимость)
+  const limits = PLAN_LIMITS[workspace.plan] || PLAN_LIMITS.trial;
+  if (!limits.funnel) {
+    return res.status(403).json({
+      error: 'plan_feature_unavailable',
+      message: 'Воронка продаж доступна только на тарифе Pro.'
+    });
+  }
+  next();
+}
+
 // Получить все периоды со снимками
-router.get('/periods', async (req, res) => {
+router.get('/periods', checkFunnelAccess, async (req, res) => {
   try {
     const periodsResult = await db.execute({ sql: `
       SELECT fp.*, c.name as creator_name, c.avatar_color

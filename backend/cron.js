@@ -1,11 +1,8 @@
 import cron from 'node-cron';
 import { db } from './db.js';
 import { fetchStatsForVideo } from './fetchers.js';
-
-// Умное обновление: частота зависит от возраста видео
-// - младше 7 дней  → каждые 12 часов
-// - 7–30 дней      → раз в день
-// - старше 30 дней → раз в неделю
+import { isPlanActive } from './middleware/auth.js';
+import { trackPlatformError, clearPlatformErrors } from './telegram.js';
 
 function getAgeInDays(publishedAt, addedAt) {
   const date = publishedAt || addedAt;
@@ -18,22 +15,28 @@ function shouldRefresh(video, nowHour) {
   const age = getAgeInDays(video.published_at, video.added_at);
 
   if (age < 7) {
-    // Каждые 12 часов — запускаем в 0:00 и 12:00
     return nowHour === 0 || nowHour === 12;
   }
 
   if (age < 30) {
-    // Раз в день — запускаем в 6:00
     return nowHour === 6;
   }
 
-  // Раз в неделю — запускаем в воскресенье в 4:00
-  const dayOfWeek = new Date().getDay(); // 0 = воскресенье
+  const dayOfWeek = new Date().getDay();
   return dayOfWeek === 0 && nowHour === 4;
 }
 
+// Кеш статусов воркспейсов чтобы не дёргать БД на каждое видео
+async function getActiveWorkspaceIds() {
+  const result = await db.execute('SELECT id, plan, trial_ends_at FROM workspaces');
+  const active = new Set();
+  for (const ws of result.rows) {
+    if (isPlanActive(ws)) active.add(Number(ws.id));
+  }
+  return active;
+}
+
 export function setupCron() {
-  // Запускаем каждый час — внутри решаем какие видео обновлять
   cron.schedule('0 * * * *', async () => {
     const nowHour = new Date().getUTCHours();
     console.log(`[cron] Tick at UTC hour ${nowHour}`);
@@ -44,10 +47,16 @@ export function setupCron() {
 }
 
 export async function refreshSmartStats(nowHour = new Date().getUTCHours()) {
+  const activeWsIds = await getActiveWorkspaceIds();
+
   const result = await db.execute('SELECT * FROM videos');
   const videos = result.rows;
 
-  const toRefresh = videos.filter(v => shouldRefresh(v, nowHour));
+  const toRefresh = videos.filter(v => {
+    // Пропускаем видео из воркспейсов с истёкшим планом
+    if (v.workspace_id && !activeWsIds.has(Number(v.workspace_id))) return false;
+    return shouldRefresh(v, nowHour);
+  });
 
   if (toRefresh.length === 0) {
     console.log('[cron] No videos to refresh this hour');
@@ -83,9 +92,20 @@ export async function refreshSmartStats(nowHour = new Date().getUTCHours()) {
         }
         updated++;
       }
+      // Очищаем ошибку при успехе
+      await db.execute({ sql: 'UPDATE videos SET last_error = NULL WHERE id = ?', args: [video.id] });
+      clearPlatformErrors(video.platform);
       await new Promise(r => setTimeout(r, 300));
     } catch (err) {
       console.error(`[cron] Failed for video ${video.id}:`, err.message);
+      // Сохраняем ошибку в БД
+      try {
+        await db.execute({
+          sql: 'UPDATE videos SET last_error = ? WHERE id = ?',
+          args: [err.message, video.id]
+        });
+      } catch {}
+      trackPlatformError(video.platform, video.id, err.message);
       failed++;
     }
   }
@@ -94,10 +114,10 @@ export async function refreshSmartStats(nowHour = new Date().getUTCHours()) {
   return { updated, failed, skipped: videos.length - toRefresh.length };
 }
 
-// Ручное обновление через кнопку — обновляет ВСЕ видео без фильтра по возрасту
 export async function refreshAllStats() {
+  const activeWsIds = await getActiveWorkspaceIds();
   const result = await db.execute('SELECT * FROM videos');
-  const videos = result.rows;
+  const videos = result.rows.filter(v => !v.workspace_id || activeWsIds.has(Number(v.workspace_id)));
 
   console.log(`[cron] Manual refresh: ${videos.length} videos...`);
   let updated = 0, failed = 0;
@@ -128,9 +148,16 @@ export async function refreshAllStats() {
         }
         updated++;
       }
+      await db.execute({ sql: 'UPDATE videos SET last_error = NULL WHERE id = ?', args: [video.id] });
       await new Promise(r => setTimeout(r, 300));
     } catch (err) {
       console.error(`[cron] Failed for video ${video.id}:`, err.message);
+      try {
+        await db.execute({
+          sql: 'UPDATE videos SET last_error = ? WHERE id = ?',
+          args: [err.message, video.id]
+        });
+      } catch {}
       failed++;
     }
   }

@@ -17,6 +17,7 @@ export default function Posts() {
   const [addingVideoTo, setAddingVideoTo] = useState(null);
   const [refreshingIds, setRefreshingIds] = useState(new Set());
   const [refreshErrors, setRefreshErrors] = useState({});
+  const [sortBy, setSortBy] = useState('date');
 
   const load = useCallback(async () => {
     if (period === 'custom' && !customFrom && !customTo) return;
@@ -66,6 +67,14 @@ export default function Posts() {
     }
   };
 
+  // Сортировка постов
+  const sortedPosts = [...posts].sort((a, b) => {
+    if (sortBy === 'views') return (b.totals?.views || 0) - (a.totals?.views || 0);
+    if (sortBy === 'er') return (b.totals?.avg_er || 0) - (a.totals?.avg_er || 0);
+    // date: по умолчанию из API уже по дате
+    return (b.published_at || b.added_at || '').localeCompare(a.published_at || a.added_at || '');
+  });
+
   return (
     <div className={styles.page}>
       <PageHeader title="Ролики" subtitle={`${posts.length} роликов за выбранный период`}>
@@ -78,17 +87,22 @@ export default function Posts() {
           <option value="">Все креаторы</option>
           {creators.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <select className={styles.filterSelect} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+          <option value="date">По дате</option>
+          <option value="views">По просмотрам</option>
+          <option value="er">По ER</option>
+        </select>
       </div>
 
       {loading ? <Loader /> : posts.length === 0
         ? <Empty icon="🎬" text="Нет роликов за выбранный период" sub="Добавьте ролик и прикрепите к нему ссылки" />
         : (
           <div className={styles.list + ' fade-in'}>
-            {posts.map((post, idx) => (
+            {sortedPosts.map((post, idx) => (
               <PostCard
                 key={post.id}
                 post={post}
-                num={posts.length - idx}
+                num={sortedPosts.length - idx}
                 expanded={expandedId === post.id}
                 onToggle={() => setExpandedId(expandedId === post.id ? null : post.id)}
                 onDelete={() => handleDeletePost(post.id)}
@@ -170,6 +184,14 @@ function PostCard({ post, num, expanded, onToggle, onDelete, onAddVideo, onDelet
               <a href={v.url} target="_blank" rel="noopener noreferrer" className={styles.vidLink}>
                 {v.title || v.url}
               </a>
+              {v.last_error && (
+                <span
+                  title={v.last_error}
+                  style={{ color: '#ef4444', fontSize: 14, cursor: 'help', flexShrink: 0 }}
+                >
+                  ⚠
+                </span>
+              )}
               <div className={styles.platStats}>
                 <PlatStat label="просм." value={fmtNum(v.views)} />
                 <PlatStat label="лайки" value={fmtNum(v.likes)} />

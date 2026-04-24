@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { fmtNum, fmtEr, platformMeta, periodToDates } from '../lib/utils.js';
-import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Btn, Loader, Empty, PlatformBadge } from '../components/UI.jsx';
+import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Btn, Input, Select, Modal, Loader, Empty, PlatformBadge } from '../components/UI.jsx';
 import styles from './CreatorDashboard.module.css';
 
 export default function CreatorDashboard() {
@@ -64,6 +64,7 @@ export default function CreatorDashboard() {
   const [videoSort, setVideoSort] = useState('views');
   const [refreshingIds, setRefreshingIds] = useState(new Set());
   const [refreshErrors, setRefreshErrors] = useState({});
+  const [showAddVideo, setShowAddVideo] = useState(false);
 
   // Топ видео по просмотрам
   const sortedVideos = [...videos].sort((a, b) => {
@@ -99,7 +100,9 @@ export default function CreatorDashboard() {
           </div>
         }
         subtitle="Персональная статистика"
-      />
+      >
+        <Btn variant="primary" onClick={() => setShowAddVideo(true)}>+ Добавить ролик</Btn>
+      </PageHeader>
 
       <div className={styles.toolbar}>
         <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t); }} />
@@ -221,6 +224,9 @@ export default function CreatorDashboard() {
                     <a href={v.url} target="_blank" rel="noopener noreferrer" className={styles.videoTitle}>
                       {v.title || v.url}
                     </a>
+                    {v.last_error && (
+                      <span title={v.last_error} style={{ color: '#ef4444', fontSize: 13, cursor: 'help', flexShrink: 0 }}>⚠</span>
+                    )}
                     <div className={styles.videoStats}>
                       <VStat label="Просм." value={fmtNum(v.views)} />
                       <VStat label="Лайки" value={fmtNum(v.likes)} />
@@ -253,10 +259,49 @@ export default function CreatorDashboard() {
             </div>
           )}
 
-          {allViews === 0 && <Empty icon="📊" text="Нет данных за выбранный период" sub="Попробуйте выбрать другой период" />}
+          {allViews === 0 && <Empty icon="📊" text="Нет данных за выбранный период" sub="Попробуйте выбрать другой период или добавьте ролик" />}
         </div>
       )}
+
+      {showAddVideo && creator && (
+        <AddVideoModal
+          creatorId={creator.id}
+          creatorName={creator.name}
+          onClose={() => setShowAddVideo(false)}
+          onSaved={() => { setShowAddVideo(false); load(); }}
+        />
+      )}
     </div>
+  );
+}
+
+function AddVideoModal({ creatorId, creatorName, onClose, onSaved }) {
+  const [url, setUrl] = useState('');
+  const [publishedAt, setPublishedAt] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    if (!url.trim()) return setError('Вставьте ссылку');
+    setLoading(true);
+    try {
+      await api.createPost({ url: url.trim(), creator_id: creatorId, published_at: publishedAt || undefined });
+      onSaved();
+    } catch (e) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <Modal title={`Новый ролик — ${creatorName}`} onClose={onClose}>
+      <p style={{ fontSize: 12, color: 'var(--text3)' }}>Добавьте ссылку на ролик — название подтянется автоматически.</p>
+      <Input label="Ссылка (YouTube / TikTok / Instagram)" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} />
+      <Input label="Дата публикации (необязательно)" type="date" value={publishedAt} onChange={e => setPublishedAt(e.target.value)} />
+      {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <Btn onClick={onClose}>Отмена</Btn>
+        <Btn variant="primary" onClick={handleSave} loading={loading}>Добавить</Btn>
+      </div>
+    </Modal>
   );
 }
 

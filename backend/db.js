@@ -144,14 +144,16 @@ export async function initDB() {
     )
   `);
 
-  // Инвайты
+  // Инвайты (многоразовые, как в Telegram)
   await db.execute(`
     CREATE TABLE IF NOT EXISTS invites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       workspace_id INTEGER NOT NULL,
       role TEXT DEFAULT 'creator',
       token TEXT UNIQUE NOT NULL,
-      used INTEGER DEFAULT 0,
+      label TEXT,
+      use_count INTEGER DEFAULT 0,
+      expires_at TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
     )
@@ -162,6 +164,21 @@ export async function initDB() {
   try { await db.execute('ALTER TABLE posts ADD COLUMN workspace_id INTEGER DEFAULT 1'); } catch {}
   try { await db.execute('ALTER TABLE videos ADD COLUMN workspace_id INTEGER DEFAULT 1'); } catch {}
   try { await db.execute('ALTER TABLE funnel_periods ADD COLUMN workspace_id INTEGER DEFAULT 1'); } catch {}
+
+  // Триал
+  try { await db.execute('ALTER TABLE workspaces ADD COLUMN trial_ends_at TEXT'); } catch {}
+
+  // Ошибки парсинга
+  try { await db.execute('ALTER TABLE videos ADD COLUMN last_error TEXT'); } catch {}
+
+  // Многоразовые инвайты
+  try { await db.execute('ALTER TABLE invites ADD COLUMN label TEXT'); } catch {}
+  try { await db.execute('ALTER TABLE invites ADD COLUMN use_count INTEGER DEFAULT 0'); } catch {}
+  try { await db.execute('ALTER TABLE invites ADD COLUMN expires_at TEXT'); } catch {}
+  try { await db.execute('ALTER TABLE workspace_members ADD COLUMN invite_id INTEGER'); } catch {}
+
+  // Удаляем старое поле used если оно ещё есть (игнорируем ошибку)
+  // SQLite не поддерживает DROP COLUMN до версии 3.35, поэтому оставляем
 
   console.log('Database initialized');
 }
