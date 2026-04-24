@@ -46,9 +46,21 @@ export function requireRole(roles) {
   };
 }
 
+// Модель доступа по ролям:
+//   creator  — читает всю статистику команды; добавляет/редактирует ролики
+//   manager  — всё что creator + управление воронкой
+//   owner    — полный доступ, управление командой и тарифом
+//
+// Все GET-роуты (stats, posts, videos, creators) фильтруют только по workspace_id
+// и не ограничивают по роли — creator видит данные всей команды.
+// requireActivePlan применяется только к роутам записи (POST/PUT/DELETE).
+
 // Блокирует запись если план истёк — только чтение
 export function requireActivePlan(req, res, next) {
-  if (!req.workspace) return res.status(403).json({ error: 'Нет активного плана' });
+  if (!req.workspace) {
+    // workspace не прикреплён — пропускаем без блокировки (нет контекста плана)
+    return next();
+  }
   if (!isPlanActive(req.workspace)) {
     return res.status(403).json({ error: 'trial_expired', message: 'Пробный период закончился. Данные доступны в режиме чтения.' });
   }

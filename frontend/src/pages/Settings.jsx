@@ -218,9 +218,6 @@ export default function Settings() {
                   <span style={{ fontWeight: 600, fontSize: 13 }}>{p.price}</span>
                 </div>
               ))}
-              <p style={{ fontSize: 11, color: 'var(--text3)', margin: '4px 0 0' }}>
-                Для оплаты или смены тарифа — напишите нам
-              </p>
             </div>
           </div>
         )}
@@ -266,9 +263,8 @@ export default function Settings() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div className={styles.inviteRoles}>
                   {[
-                    { value: 'creator', label: '🎬 Креатор', desc: 'Видит свои ролики' },
-                    { value: 'manager', label: '📋 Менеджер', desc: 'Может редактировать' },
-                    { value: 'owner', label: '👑 Владелец', desc: 'Полный доступ' },
+                    { value: 'creator', label: '🎬 Креатор', desc: 'Видит статистику команды, вносит свои ролики' },
+                    { value: 'manager', label: '📋 Менеджер', desc: 'Вносит изменения в воронку продаж' },
                   ].map(r => (
                     <button
                       key={r.value}
