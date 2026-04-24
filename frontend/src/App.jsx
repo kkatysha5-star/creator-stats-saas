@@ -112,6 +112,25 @@ export default function App() {
   );
 }
 
+function ThemeToggle({ theme, onToggle }) {
+  const isDark = theme === 'dark';
+  return (
+    <button
+      onClick={onToggle}
+      className="theme-toggle"
+      title={isDark ? 'Светлая тема' : 'Тёмная тема'}
+      aria-label="Переключить тему"
+    >
+      <Moon size={13} strokeWidth={1.5} className="toggle-icon toggle-moon" />
+      <span className={`toggle-track ${isDark ? '' : 'toggle-track-light'}`}>
+        <span className={`toggle-thumb ${isDark ? '' : 'toggle-thumb-right'}`} />
+      </span>
+      <Sun size={13} strokeWidth={1.5} className="toggle-icon toggle-sun" />
+      <span className="toggle-label">{isDark ? 'Тёмная' : 'Светлая'}</span>
+    </button>
+  );
+}
+
 function AppLayout({ auth }) {
   const workspace = auth?.workspaces?.[0];
   const role = workspace?.role;
@@ -155,25 +174,7 @@ function AppLayout({ auth }) {
           </nav>
 
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4, padding: '0 0 4px' }}>
-            {/* Theme toggle */}
-            <button
-              onClick={toggleTheme}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 11px', borderRadius: 10, border: 'none',
-                background: 'transparent', cursor: 'pointer',
-                color: 'rgba(255,255,255,0.3)', fontSize: 13, fontWeight: 500,
-                fontFamily: 'var(--font)', transition: 'all 150ms',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'var(--text)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.3)'; }}
-            >
-              {theme === 'dark'
-                ? <Sun size={16} strokeWidth={1.2} style={{ stroke: 'rgba(255,255,255,0.2)' }} />
-                : <Moon size={16} strokeWidth={1.2} style={{ stroke: 'rgba(255,255,255,0.2)' }} />
-              }
-              {theme === 'dark' ? 'Светлая' : 'Тёмная'}
-            </button>
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
 
             <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'} style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 4 }}>
               <Settings2 size={16} strokeWidth={1.2} />
