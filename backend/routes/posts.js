@@ -88,7 +88,7 @@ router.post('/', async (req, res) => {
     const postId = postResult.lastInsertRowid;
 
     const video_id = extractVideoId(url, platform);
-    const vidResult = await db.execute({ sql: 'INSERT INTO videos (post_id, creator_id, platform, url, video_id, published_at) VALUES (?, ?, ?, ?, ?, ?)', args: [postId, creator_id, platform, url, video_id || null, published_at || null] });
+    const vidResult = await db.execute({ sql: 'INSERT INTO videos (post_id, creator_id, platform, url, video_id, published_at, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [postId, creator_id, platform, url, video_id || null, published_at || null, wsId || 1] });
     const videoDbId = vidResult.lastInsertRowid;
 
     const videoRow = await db.execute({ sql: 'SELECT * FROM videos WHERE id = ?', args: [videoDbId] });
@@ -122,7 +122,8 @@ router.post('/:id/videos', async (req, res) => {
     if (existing.rows.length) return res.status(409).json({ error: `Уже есть ссылка на ${platform}` });
 
     const video_id = extractVideoId(url, platform);
-    const vidResult = await db.execute({ sql: 'INSERT INTO videos (post_id, creator_id, platform, url, video_id, published_at) VALUES (?, ?, ?, ?, ?, ?)', args: [post.id, post.creator_id, platform, url, video_id || null, post.published_at || null] });
+    const wsId = req.workspaceId || post.workspace_id;
+    const vidResult = await db.execute({ sql: 'INSERT INTO videos (post_id, creator_id, platform, url, video_id, published_at, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [post.id, post.creator_id, platform, url, video_id || null, post.published_at || null, wsId || 1] });
     const videoDbId = vidResult.lastInsertRowid;
 
     const videoRow = await db.execute({ sql: 'SELECT * FROM videos WHERE id = ?', args: [videoDbId] });

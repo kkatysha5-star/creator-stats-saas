@@ -180,5 +180,16 @@ export async function initDB() {
   // Удаляем старое поле used если оно ещё есть (игнорируем ошибку)
   // SQLite не поддерживает DROP COLUMN до версии 3.35, поэтому оставляем
 
+  // Фикс: видео добавленные через /posts не получали workspace_id — исправляем через creator
+  try {
+    await db.execute(`
+      UPDATE videos
+      SET workspace_id = (SELECT workspace_id FROM creators WHERE creators.id = videos.creator_id)
+      WHERE (workspace_id IS NULL OR workspace_id = 1)
+        AND creator_id IS NOT NULL
+        AND EXISTS (SELECT 1 FROM creators WHERE creators.id = videos.creator_id AND creators.workspace_id > 1)
+    `);
+  } catch {}
+
   console.log('Database initialized');
 }
