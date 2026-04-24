@@ -28,10 +28,10 @@
 }
 .labelTab:hover { color: var(--text); background: var(--bg3); }
 .labelTabActive {
-  background: var(--accent-bg);
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 600;
+  background: rgba(255,106,0,0.1);
+  border-color: rgba(255,106,0,0.4);
+  color: #ff6a00;
+  font-weight: 700;
 }
 
 .compareWrap { display: flex; align-items: center; gap: 8px; }
@@ -52,8 +52,9 @@
 /* Таблица */
 .tableWrap {
   margin: 0 28px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-top: 1px solid var(--card-border-top);
   border-radius: var(--radius);
   overflow-x: auto;
 }
@@ -70,10 +71,10 @@
   text-align: left;
   padding: 8px 12px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text3);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
   white-space: nowrap;
   position: sticky;
   left: 0;
@@ -105,7 +106,7 @@
   padding: 10px 12px;
   position: sticky;
   left: 0;
-  background: var(--bg2);
+  background: var(--bg);
   border-right: 1px solid var(--border);
   transition: background .1s;
 }

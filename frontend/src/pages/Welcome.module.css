@@ -8,8 +8,9 @@
 }
 
 .card {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-top: 1px solid var(--card-border-top);
   border-radius: var(--radius-lg);
   padding: 40px;
   width: 100%;
@@ -52,7 +53,7 @@
   transition: all .15s;
   width: 100%;
 }
-.roleCard:hover { border-color: var(--accent); background: var(--accent-bg); }
+.roleCard:hover { border-color: #ff6a00; background: rgba(255,106,0,0.07); }
 
 .roleIcon { font-size: 28px; flex-shrink: 0; }
 .roleTitle { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 3px; }

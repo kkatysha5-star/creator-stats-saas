@@ -1,63 +1,61 @@
-.page { padding: 0 0 48px; }
+.page { padding: 0 0 56px; }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
+  gap: 10px;
   padding: 0 28px;
 }
 
 .card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-top: 1px solid var(--card-border-top);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 18px;
   position: relative;
   overflow: hidden;
-  transition: border-color .15s;
+  transition: border-top-color 150ms, background 150ms;
+  cursor: default;
 }
-.card:hover { border-color: var(--border2); }
+.card:hover {
+  border-top-color: var(--card-hover-top);
+  background: var(--card-hover-bg), var(--card-bg);
+}
 
 .cardTop { display: flex; align-items: center; gap: 12px; }
 .cardInfo { flex: 1; overflow: hidden; }
-.name { font-size: 14px; font-weight: 600; color: var(--text); }
-.username { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.name { font-size: 14px; font-weight: 700; color: var(--text); }
+.username { font-size: 12px; color: var(--text3); margin-top: 2px; font-weight: 400; }
 
-.cardActions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.cardActions { display: flex; gap: 4px; opacity: 0; transition: opacity 150ms; }
 .card:hover .cardActions { opacity: 1; }
 .iconBtn {
-  width: 26px; height: 26px;
-  border-radius: 5px;
+  width: 28px; height: 28px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text3);
   font-size: 13px;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  transition: all .1s;
+  transition: all 150ms;
 }
-.iconBtn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
-.del:hover { color: #ff5050 !important; border-color: rgba(255,80,80,.3) !important; }
+.iconBtn:hover { background: rgba(255,255,255,0.07); color: var(--text); border-color: var(--border2); }
+.del:hover { color: #f87171 !important; border-color: rgba(248,113,113,.3) !important; }
 
 .colorDot {
   position: absolute;
   bottom: -10px; right: -10px;
-  width: 48px; height: 48px;
+  width: 56px; height: 56px;
   border-radius: 50%;
-  opacity: 0.12;
+  opacity: 0.1;
   pointer-events: none;
 }
 
-/* ===== МОБИЛЬНАЯ АДАПТАЦИЯ ===== */
-@media (max-width: 768px) {
-  .grid { padding: 0 16px; grid-template-columns: 1fr 1fr; gap: 10px; }
-  /* Кнопки всегда видны на тач-устройствах */
-  .cardActions { opacity: 1; }
-}
-
 .plans {
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -69,6 +67,11 @@
   align-items: center;
   font-size: 12px;
 }
-.planLabel { color: var(--text3); }
-.planVal { font-family: var(--mono); color: var(--text2); font-size: 12px; }
+.planLabel { color: var(--text3); font-weight: 500; }
+.planVal { color: var(--text2); font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; }
 .planSub { color: var(--text3); font-size: 11px; }
+
+@media (max-width: 768px) {
+  .grid { padding: 0 16px; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cardActions { opacity: 1; }
+}

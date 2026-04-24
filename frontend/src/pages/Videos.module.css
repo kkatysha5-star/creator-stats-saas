@@ -1,4 +1,4 @@
-.page { padding: 0 0 48px; }
+.page { padding: 0 0 56px; }
 
 .toolbar {
   display: flex;
@@ -9,13 +9,14 @@
 }
 
 .filterSelect {
-  background: var(--bg2);
+  background: var(--bg3);
   border: 1px solid var(--border2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   color: var(--text2);
   font-family: var(--font);
   font-size: 12.5px;
-  padding: 6px 10px;
+  font-weight: 500;
+  padding: 6px 13px;
   outline: none;
   cursor: pointer;
 }
@@ -24,23 +25,23 @@
 
 .tableWrap {
   margin: 0 28px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-top: 1px solid var(--card-border-top);
   border-radius: var(--radius);
   overflow: hidden;
 }
 
-/* ДЕСКТОП */
 .tableHead {
   display: grid;
   grid-template-columns: 280px 110px 90px 100px 90px 90px 80px 80px 70px 120px 60px;
-  padding: 9px 14px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10.5px;
+  font-weight: 700;
   color: var(--text3);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
   gap: 8px;
   align-items: center;
 }
@@ -48,54 +49,49 @@
 .row {
   display: grid;
   grid-template-columns: 280px 110px 90px 100px 90px 90px 80px 80px 70px 120px 60px;
-  padding: 9px 14px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   gap: 8px;
   align-items: center;
-  transition: background .1s;
+  transition: background 150ms;
 }
 .row:last-child { border-bottom: none; }
-.row:hover { background: var(--bg3); }
+.row:hover { background: rgba(255,255,255,0.025); }
+[data-theme="light"] .row:hover { background: rgba(0,0,0,0.025); }
 
 .titleCell { display: flex; align-items: center; gap: 8px; overflow: hidden; }
 .titleInfo { display: flex; flex-direction: column; overflow: hidden; gap: 1px; }
 .videoTitle {
-  font-size: 13px; font-weight: 500; color: var(--text);
+  font-size: 13px; font-weight: 600; color: var(--text);
   text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.videoTitle:hover { color: var(--accent); }
-.creatorName { font-size: 11px; color: var(--text3); }
+.videoTitle:hover { color: #ff6a00; }
+.creatorName { font-size: 11px; color: var(--text3); font-weight: 400; }
 
-.date { font-size: 12px; color: var(--text3); font-family: var(--mono); }
-.mono { font-family: var(--mono); font-size: 13px; color: var(--text); }
+.date { font-size: 12px; color: var(--text3); font-variant-numeric: tabular-nums; }
+.mono { font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 500; }
 .na { color: var(--text3); }
-.erVal { color: var(--accent); font-weight: 500; }
+.erVal { color: #ff6a00; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 13px; }
 
 .actions { display: flex; gap: 4px; align-items: center; }
 .iconBtn {
-  width: 26px; height: 26px; border-radius: 5px;
+  width: 28px; height: 28px; border-radius: 8px;
   border: 1px solid var(--border); background: transparent;
   color: var(--text3); font-size: 13px;
   display: flex; align-items: center; justify-content: center;
-  transition: all .1s;
+  transition: all 150ms; cursor: pointer;
 }
-.iconBtn:hover:not(:disabled) { background: var(--bg3); color: var(--text); border-color: var(--border2); }
-.iconBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-.del:hover:not(:disabled) { color: #ff5050 !important; border-color: rgba(255,80,80,.3) !important; }
+.iconBtn:hover:not(:disabled) { background: rgba(255,255,255,0.07); color: var(--text); border-color: var(--border2); }
+.iconBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+.del:hover:not(:disabled) { color: #f87171 !important; border-color: rgba(248,113,113,.3) !important; }
 
-/* только на мобиле */
 .mobileRow { display: none; }
 
-/* ===== МОБИЛЬНАЯ АДАПТАЦИЯ ===== */
 @media (max-width: 768px) {
   .toolbar { padding: 0 16px 16px; }
   .tableWrap { margin: 0 16px; }
   .tableHead { display: none; }
-
-  /* Десктопная строка — скрываем */
   .row { display: none; }
-
-  /* Мобильная карточка */
   .mobileRow {
     display: flex;
     flex-direction: column;
@@ -104,58 +100,26 @@
     border-bottom: 1px solid var(--border);
   }
   .mobileRow:last-child { border-bottom: none; }
-
-  .mobileTop {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  .mobileTitle {
-    flex: 1;
-    font-size: 13.5px;
-    font-weight: 500;
-    color: var(--text);
-    text-decoration: none;
-    line-height: 1.4;
-  }
-  .mobileTitle:hover { color: var(--accent); }
+  .mobileTop { display: flex; align-items: flex-start; gap: 10px; }
+  .mobileTitle { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--text); text-decoration: none; line-height: 1.4; }
+  .mobileTitle:hover { color: #ff6a00; }
   .mobileCreator { font-size: 11px; color: var(--text3); margin-top: 2px; }
-
-  .mobileMeta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .mobileStats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    background: var(--bg3);
-    border-radius: var(--radius-sm);
-    padding: 10px;
-  }
+  .mobileMeta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .mobileStats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); padding: 10px; }
   .mobileStat { display: flex; flex-direction: column; gap: 2px; }
-  .mobileStatLabel { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.4px; }
-  .mobileStatVal { font-family: var(--mono); font-size: 13px; color: var(--text); font-weight: 500; }
-  .mobileStatVal.accent { color: var(--accent); }
-
-  .mobileActions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 6px;
-  }
-  .iconBtn {
-    width: 32px; height: 32px; font-size: 15px;
-  }
+  .mobileStatLabel { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .mobileStatVal { font-size: 13px; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .mobileStatVal.accent { color: #ff6a00; }
+  .mobileActions { display: flex; justify-content: flex-end; gap: 6px; }
+  .iconBtn { width: 34px; height: 34px; font-size: 15px; }
 }
 
 .refreshError {
   font-size: 11px;
   color: #f87171;
   padding: 4px 12px 6px;
-  background: #fef2f2;
-  border-left: 3px solid #fca5a5;
+  background: rgba(248,113,113,0.08);
+  border-left: 3px solid rgba(248,113,113,0.4);
+  border-radius: 0 4px 4px 0;
   margin: -2px 0 4px;
 }

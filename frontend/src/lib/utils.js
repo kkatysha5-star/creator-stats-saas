@@ -10,9 +10,9 @@ export function fmtEr(er) {
 
 export function platformMeta(platform) {
   return {
-    youtube: { label: 'YouTube', color: '#FF4444', short: 'YT' },
-    tiktok:  { label: 'TikTok',  color: '#69C9D0', short: 'TT' },
-    instagram: { label: 'Instagram', color: '#F97316', short: 'IG' },
+    youtube:   { label: 'YouTube',   color: '#ff4444', short: 'YT' },
+    tiktok:    { label: 'TikTok',    color: '#32cd64', short: 'TT' },
+    instagram: { label: 'Instagram', color: '#ff6a00', short: 'IG' },
   }[platform] || { label: platform, color: '#888', short: '?' };
 }
 
