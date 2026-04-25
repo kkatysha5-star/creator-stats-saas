@@ -31,7 +31,7 @@ export default function Welcome() {
               <rect x="2" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.5"/>
               <rect x="13" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.7"/>
             </svg>
-            <span className={styles.logoText}>Creator Stats</span>
+            <span className={styles.logoText}>КонтентМетрика</span>
           </div>
           <h1 className={styles.title}>Добро пожаловать!</h1>
           <p className={styles.sub}>Кто вы? Выберите роль чтобы начать</p>

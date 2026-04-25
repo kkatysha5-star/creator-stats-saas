@@ -45,7 +45,7 @@ export default function Onboarding() {
               <rect x="2" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.5"/>
               <rect x="13" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.7"/>
             </svg>
-            <span className={styles.logoText}>Creator Stats</span>
+            <span className={styles.logoText}>КонтентМетрика</span>
           </div>
 
           <h1 className={styles.title}>Кто вы?</h1>
@@ -124,7 +124,7 @@ export default function Onboarding() {
             <rect x="2" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.5"/>
             <rect x="13" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.7"/>
           </svg>
-          <span className={styles.logoText}>Creator Stats</span>
+          <span className={styles.logoText}>КонтентМетрика</span>
         </div>
 
         <h1 className={styles.title}>Создайте свой контент-завод</h1>

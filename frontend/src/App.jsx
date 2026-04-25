@@ -151,7 +151,7 @@ function AppLayout({ auth }) {
               <rect x="1" y="12" width="8.5" height="8.5" rx="2.5" fill="#ff6a00" opacity="0.45"/>
               <rect x="12" y="12" width="8.5" height="8.5" rx="2.5" fill="#ff6a00" opacity="0.7"/>
             </svg>
-            <span>Creator Stats</span>
+            <span>КонтентМетрика</span>
           </div>
           <nav>
             <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
