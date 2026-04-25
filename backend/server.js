@@ -73,6 +73,7 @@ const authLimiter = rateLimit({
 
 app.use('/api', generalLimiter);
 app.use('/api/auth', authLimiter);
+app.use('/auth', authLimiter);
 
 // Логирование подозрительных 403
 app.use((req, res, next) => {
@@ -109,7 +110,8 @@ app.use(passport.session());
 app.use(attachWorkspace);
 
 initDB().then(() => {
-  app.use('/api/auth', authRouter);
+  app.use('/auth', authRouter);      // OAuth flow: /auth/google, /auth/google/callback
+  app.use('/api/auth', authRouter);  // Frontend API calls: /api/auth/me, /api/auth/logout
   app.use('/api/workspaces', workspacesRouter);
 
   // Сброс Instagram-кэша для тестирования (только после авторизации)
