@@ -359,13 +359,12 @@
 
 .tableHead {
   display: grid;
-  padding: 10px 16px;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--border);
-  font-size: 10.5px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.7px;
+  letter-spacing: 0.2px;
   align-items: center;
   gap: 0;
 }

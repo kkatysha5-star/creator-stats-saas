@@ -105,7 +105,6 @@ export default function Videos() {
               <span>Просмотры</span>
               <span>Лайки</span>
               <span>Коммент.</span>
-              <span>Сохр.</span>
               <span>Репосты</span>
               <span>ER</span>
               <span>Обновлено</span>
@@ -159,7 +158,6 @@ function VideoRow({ video: v, refreshing, refreshError, onRefresh, onDelete }) {
         <span className={styles.mono}>{fmtNum(v.views)}</span>
         <span className={styles.mono}>{fmtNum(v.likes)}</span>
         <span className={styles.mono}>{fmtNum(v.comments)}</span>
-        <span className={styles.mono}>{v.saves != null ? fmtNum(v.saves) : <span className={styles.na}>—</span>}</span>
         <span className={styles.mono}>{v.shares != null ? fmtNum(v.shares) : <span className={styles.na}>—</span>}</span>
         <span className={[styles.mono, styles.erVal].join(' ')}>{fmtEr(v.er)}</span>
         <span className={styles.date}>{statsUpdated}</span>

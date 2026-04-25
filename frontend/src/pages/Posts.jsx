@@ -161,7 +161,6 @@ function PostCard({ post, num, expanded, onToggle, onDelete, onAddVideo, onDelet
           <Stat label="Просмотры" value={fmtNum(totals.views)} />
           <Stat label="Лайки" value={fmtNum(totals.likes)} />
           <Stat label="Коммент." value={fmtNum(totals.comments)} />
-          {hasSaves && <Stat label="Сохр." value={fmtNum(totals.saves)} />}
           {hasShares && <Stat label="Репосты" value={fmtNum(totals.shares)} />}
           <Stat label="ER" value={fmtEr(totals.avg_er)} accent />
         </div>
@@ -196,7 +195,6 @@ function PostCard({ post, num, expanded, onToggle, onDelete, onAddVideo, onDelet
                 <PlatStat label="просм." value={fmtNum(v.views)} />
                 <PlatStat label="лайки" value={fmtNum(v.likes)} />
                 <PlatStat label="комм." value={fmtNum(v.comments)} />
-                {v.saves != null && <PlatStat label="сохр." value={fmtNum(v.saves)} />}
                 {v.shares != null && <PlatStat label="репост" value={fmtNum(v.shares)} />}
                 <PlatStat label="ER" value={fmtEr(v.er)} accent />
               </div>
