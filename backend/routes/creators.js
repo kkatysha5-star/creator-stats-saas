@@ -69,13 +69,13 @@ router.post('/', requireAuth, requireActivePlan, async (req, res) => {
 
 router.put('/:id', requireAuth, requireActivePlan, async (req, res) => {
   try {
-    const { name, username, email, avatar_color, video_plan_count, video_plan_period, reach_plan, daily_rate } = req.body;
+    const { name, username, email, avatar_color, video_plan_count, video_plan_period, reach_plan, daily_rate, period_start } = req.body;
     const existing = await db.execute({ sql: 'SELECT * FROM creators WHERE id = ?', args: [req.params.id] });
     if (!existing.rows.length) return res.status(404).json({ error: 'Not found' });
     const e = existing.rows[0];
     await db.execute({
-      sql: 'UPDATE creators SET name = ?, username = ?, email = ?, avatar_color = ?, video_plan_count = ?, video_plan_period = ?, reach_plan = ?, daily_rate = ? WHERE id = ?',
-      args: [name || e.name, username ?? e.username, email ?? e.email, avatar_color || e.avatar_color, video_plan_count ?? e.video_plan_count, video_plan_period ?? e.video_plan_period, reach_plan ?? e.reach_plan, daily_rate ?? e.daily_rate, req.params.id]
+      sql: 'UPDATE creators SET name = ?, username = ?, email = ?, avatar_color = ?, video_plan_count = ?, video_plan_period = ?, reach_plan = ?, daily_rate = ?, period_start = ? WHERE id = ?',
+      args: [name || e.name, username ?? e.username, email ?? e.email, avatar_color || e.avatar_color, video_plan_count ?? e.video_plan_count, video_plan_period ?? e.video_plan_period, reach_plan ?? e.reach_plan, daily_rate ?? e.daily_rate, period_start ?? e.period_start ?? null, req.params.id]
     });
     const updated = await db.execute({ sql: 'SELECT * FROM creators WHERE id = ?', args: [req.params.id] });
     res.json(updated.rows[0]);

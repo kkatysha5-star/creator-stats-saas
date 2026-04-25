@@ -251,6 +251,7 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
   const [videoPlanPeriod, setVideoPlanPeriod] = useState(initial?.video_plan_period || 'month');
   const [dailyRate, setDailyRate] = useState(initial?.daily_rate || '');
   const [reachPlan, setReachPlan] = useState(initial?.reach_plan || '');
+  const [periodStart, setPeriodStart] = useState(initial?.period_start || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -264,6 +265,7 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
         video_plan_period: videoPlanPeriod,
         daily_rate: parseInt(dailyRate) || 0,
         reach_plan: parseInt(reachPlan) || 0,
+        period_start: periodStart || null,
       };
       if (initial) {
         await api.updateCreator(initial.id, data);
@@ -296,6 +298,8 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
 
       <Input label="📅 Роликов в день (для расчёта отставания)" placeholder="2" type="number" value={dailyRate} onChange={e => setDailyRate(e.target.value)} />
       <Input label="👁 План охватов в месяц (просмотры)" placeholder="0" type="number" value={reachPlan} onChange={e => setReachPlan(e.target.value)} />
+      <Input label="📆 Дата старта расчётного периода" type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)}
+        style={{ colorScheme: 'dark' }} />
 
       <div>
         <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 8, fontWeight: 500 }}>Цвет аватара</p>

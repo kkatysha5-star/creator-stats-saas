@@ -149,38 +149,58 @@ export default function CreatorDashboard() {
           </div>
 
           {/* Планы */}
-          {(videoPct !== null || reachPct !== null) && (
-            <div style={{ padding: '0 28px 20px', display: 'flex', gap: 10 }}>
-              {videoPct !== null && (
-                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', flex: 1 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>🎬 Ролики план/факт</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.5px' }}>
-                    {totalUniqueVideos} / {monthVideoPlan}
+          {(videoPct !== null || reachPct !== null) && (() => {
+            // статус в графике / отстаёт
+            const rate = Number(creator?.daily_rate);
+            const pStart = creator?.period_start;
+            let sched = null;
+            if (pStart && rate) {
+              const start = new Date(pStart + 'T00:00:00');
+              const today = new Date();
+              if (today >= start) {
+                const days = Math.floor((today - start) / 86400000);
+                const expected = Math.round(rate * days);
+                const delta = totalUniqueVideos - expected;
+                sched = { delta, ok: delta >= 0 };
+              }
+            }
+            const pctColor = (p) => p >= 100 ? '#4ade80' : p >= 70 ? '#4ade80' : p >= 40 ? '#ff6a00' : '#f87171';
+            return (
+              <div style={{ padding: '0 28px 20px', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {videoPct !== null && (
+                  <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderTop: '1px solid var(--card-border-top)', borderRadius: 'var(--radius)', padding: '16px 20px', flex: 1, minWidth: 200 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.7px', fontWeight: 700, marginBottom: 10 }}>🎬 Ролики</div>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums', marginBottom: 4 }}>
+                      {totalUniqueVideos}<span style={{ fontSize: 16, color: 'var(--text3)', fontWeight: 400 }}> / {monthVideoPlan}</span>
+                    </div>
+                    <div style={{ height: 5, background: 'rgba(255,255,255,0.05)', borderRadius: 10, overflow: 'hidden', margin: '8px 0 6px' }}>
+                      <div style={{ height: '100%', width: videoPct + '%', background: pctColor(videoPct), borderRadius: 10, transition: 'width .5s' }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: pctColor(videoPct) }}>{videoPct}% выполнения</span>
+                      {sched && (
+                        <span style={{ fontSize: 12, fontWeight: 700, color: sched.ok ? '#4ade80' : '#f87171' }}>
+                          {sched.ok ? `✓ в графике${sched.delta > 0 ? ` (+${sched.delta})` : ''}` : `↓ −${Math.abs(sched.delta)} ролика`}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ marginTop: 8, height: 4, background: 'var(--bg4)', borderRadius: 2, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: videoPct + '%', background: videoPct >= 100 ? '#4ade80' : videoPct >= 70 ? '#f59e0b' : 'var(--accent)', borderRadius: 2, transition: 'width .4s' }} />
+                )}
+                {reachPct !== null && (
+                  <div style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderTop: '1px solid var(--card-border-top)', borderRadius: 'var(--radius)', padding: '16px 20px', flex: 1, minWidth: 200 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.7px', fontWeight: 700, marginBottom: 10 }}>👁 Охваты</div>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums', marginBottom: 4 }}>
+                      {fmtNum(allViews)}<span style={{ fontSize: 16, color: 'var(--text3)', fontWeight: 400 }}> / {fmtNum(creator.reach_plan)}</span>
+                    </div>
+                    <div style={{ height: 5, background: 'rgba(255,255,255,0.05)', borderRadius: 10, overflow: 'hidden', margin: '8px 0 6px' }}>
+                      <div style={{ height: '100%', width: reachPct + '%', background: pctColor(reachPct), borderRadius: 10, transition: 'width .5s' }} />
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: pctColor(reachPct) }}>{reachPct}% выполнения</span>
                   </div>
-                  <div style={{ fontSize: 11, color: videoPct >= 100 ? '#4ade80' : videoPct >= 70 ? '#f59e0b' : 'var(--text3)', marginTop: 4 }}>
-                    {videoPct}% выполнения
-                  </div>
-                </div>
-              )}
-              {reachPct !== null && (
-                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', flex: 1 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>👁 Охваты план/факт</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.5px' }}>
-                    {fmtNum(allViews)} / {fmtNum(creator.reach_plan)}
-                  </div>
-                  <div style={{ marginTop: 8, height: 4, background: 'var(--bg4)', borderRadius: 2, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: reachPct + '%', background: reachPct >= 100 ? '#4ade80' : reachPct >= 70 ? '#f59e0b' : 'var(--accent)', borderRadius: 2, transition: 'width .4s' }} />
-                  </div>
-                  <div style={{ fontSize: 11, color: reachPct >= 100 ? '#4ade80' : reachPct >= 70 ? '#f59e0b' : 'var(--text3)', marginTop: 4 }}>
-                    {reachPct}% выполнения
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })()}
 
           {/* Разбивка по платформам */}
           {allViews > 0 && (

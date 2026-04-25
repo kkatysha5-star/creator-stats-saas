@@ -180,6 +180,9 @@ export async function initDB() {
   // Удаляем старое поле used если оно ещё есть (игнорируем ошибку)
   // SQLite не поддерживает DROP COLUMN до версии 3.35, поэтому оставляем
 
+  // Дата старта расчётного периода на самом креаторе (резерв если нет воронки)
+  try { await db.execute('ALTER TABLE creators ADD COLUMN period_start TEXT'); } catch {}
+
   // Фикс: видео добавленные через /posts не получали workspace_id — исправляем через creator
   try {
     await db.execute(`

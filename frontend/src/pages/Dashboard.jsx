@@ -438,30 +438,69 @@ function RankingList({ creators, tab, funnelPayouts, onOpen }) {
   );
 }
 
+function scheduleStatus(c) {
+  const rate = Number(c.daily_rate);
+  if (!c.period_start || !rate) return null;
+  const start = new Date(c.period_start + 'T00:00:00');
+  const today = new Date();
+  if (today < start) return null;
+  const days = Math.floor((today - start) / 86400000);
+  const expected = Math.round(rate * days);
+  const actual = Number(c.total_videos) || 0;
+  const delta = actual - expected;
+  return { delta, ok: delta >= 0 };
+}
+
 function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOpen }) {
   const prevMap = {};
   prevByCreator.forEach(c => { prevMap[c.creator_id] = c; });
 
-  const hasVideoPlan = creators.some(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0);
-  const gridCols = `minmax(140px,1.5fr) 130px${hasVideoPlan ? ' 110px' : ''} minmax(90px,1fr) minmax(80px,1fr) minmax(80px,1fr) 70px 70px`;
+  const monthPlan = c => c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0);
+  const hasVideoPlan = creators.some(c => monthPlan(c) > 0);
+  const hasReachPlan = creators.some(c => (c.reach_plan || 0) > 0);
+
+  const cols = [
+    'creator',
+    'platforms',
+    hasVideoPlan && 'videoPlan',
+    hasReachPlan && 'reachPlan',
+    'views',
+    'likes',
+    'comments',
+    'er',
+  ].filter(Boolean);
+
+  const colWidths = {
+    creator:    'minmax(150px,1.5fr)',
+    platforms:  '100px',
+    videoPlan:  '140px',
+    reachPlan:  '130px',
+    views:      'minmax(90px,1fr)',
+    likes:      'minmax(80px,1fr)',
+    comments:   'minmax(80px,1fr)',
+    er:         '70px',
+  };
+  const gridCols = cols.map(c => colWidths[c]).join(' ');
 
   return (
     <div className={styles.creatorsTable}>
       <div className={styles.tableHead} style={{ gridTemplateColumns: gridCols }}>
         <span>Креатор</span>
-        <span>Платф. / Ролики</span>
-        {hasVideoPlan && <span>План/Факт</span>}
+        <span>Платформы</span>
+        {hasVideoPlan && <span>Ролики план/факт</span>}
+        {hasReachPlan && <span>Охваты план/факт</span>}
         <span>Просмотры</span>
         <span>Лайки</span>
         <span>Коммент.</span>
-        <span>Репосты</span>
         <span>ER</span>
       </div>
       {creators.map(c => {
         const prev = prevMap[c.creator_id];
         const plats = c.platforms ? c.platforms.split(',').filter(p => activePlatforms.has(p)) : [];
-        const monthPlan = c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0);
-        const videoPct = monthPlan > 0 ? Math.min(Math.round((c.total_videos||0) / monthPlan * 100), 100) : null;
+        const mp = monthPlan(c);
+        const videoPct = mp > 0 ? Math.min(Math.round((c.total_videos||0) / mp * 100), 100) : null;
+        const reachPct = c.reach_plan > 0 ? Math.min(Math.round((c.total_views||0) / c.reach_plan * 100), 100) : null;
+        const sched = scheduleStatus(c);
         const dv = (curr, p) => hasPrev && prev ? calcDelta(curr, p) : null;
 
         return (
@@ -475,14 +514,33 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
               <span className={styles.platCount}>{c.total_videos || 0}</span>
             </div>
             {hasVideoPlan && (
-              <span className={styles.mono}>
-                {monthPlan > 0
-                  ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span>{c.total_videos||0}/{monthPlan}</span>
-                      <span style={{ fontSize: 10, color: videoPct >= 70 ? '#4ade80' : videoPct >= 40 ? '#ff6a00' : '#f87171', fontWeight: 700 }}>{videoPct}%</span>
+              <div className={styles.planCell}>
+                {mp > 0 ? (
+                  <>
+                    <span className={styles.planCellMain}>
+                      {c.total_videos||0}<span className={styles.planCellSep}>/</span>{mp}
+                      <span className={styles.planCellPct} style={{ color: videoPct >= 70 ? '#4ade80' : videoPct >= 40 ? '#ff6a00' : '#f87171' }}>{videoPct}%</span>
                     </span>
-                  : <span style={{ color: 'var(--text3)' }}>—</span>}
-              </span>
+                    {sched && (
+                      <span className={styles.planCellStatus} style={{ color: sched.ok ? '#4ade80' : '#f87171' }}>
+                        {sched.ok ? `✓ в графике${sched.delta > 0 ? ` (+${sched.delta})` : ''}` : `↓ −${Math.abs(sched.delta)} ролика`}
+                      </span>
+                    )}
+                  </>
+                ) : <span style={{ color: 'var(--text3)' }}>—</span>}
+              </div>
+            )}
+            {hasReachPlan && (
+              <div className={styles.planCell}>
+                {c.reach_plan > 0 ? (
+                  <>
+                    <span className={styles.planCellMain}>
+                      {fmtNum(c.total_views||0)}<span className={styles.planCellSep}>/</span>{fmtNum(c.reach_plan)}
+                    </span>
+                    <span className={styles.planCellPct} style={{ color: reachPct >= 70 ? '#4ade80' : reachPct >= 40 ? '#ff6a00' : '#f87171' }}>{reachPct}%</span>
+                  </>
+                ) : <span style={{ color: 'var(--text3)' }}>—</span>}
+              </div>
             )}
             <span className={styles.monoCell}>
               {fmtNum(c.total_views)}<DeltaInline val={dv(c.total_views, prev?.total_views)} />
@@ -493,7 +551,6 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
             <span className={styles.monoCell}>
               {fmtNum(c.total_comments)}<DeltaInline val={dv(c.total_comments, prev?.total_comments)} />
             </span>
-            <span className={styles.mono}>{c.total_shares ? fmtNum(c.total_shares) : <span style={{ color: 'var(--text3)' }}>—</span>}</span>
             <span className={styles.erVal}>{fmtEr(c.avg_er)}</span>
           </div>
         );
