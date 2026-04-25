@@ -142,15 +142,15 @@ export default function Creators() {
                   <div className={styles.cardTop}>
                     <Avatar name={c.name} color={c.avatar_color} size={44} />
                     <div className={styles.cardInfo}>
-                      <p className={styles.name}>{c.name}</p>
+                      <span className={styles.name}>{c.name}</span>
                       {c.email && <p className={styles.username}>{c.email}</p>}
                       {!c.email && c.username && <p className={styles.username}>@{c.username}</p>}
                     </div>
-                    <div className={styles.cardActions}>
-                      <button className={styles.iconBtn} onClick={() => handleInvite(c)} title="Пригласить">✉</button>
-                      <button className={styles.iconBtn} onClick={() => setEditing(c)} title="Редактировать">✎</button>
-                      <button className={styles.iconBtn + ' ' + styles.del} onClick={() => handleDelete(c.id)} title="Удалить">✕</button>
-                    </div>
+                  </div>
+                  <div className={styles.cardActions}>
+                    <button className={styles.iconBtn} onClick={() => handleInvite(c)}>✉ Пригласить</button>
+                    <button className={styles.iconBtn} onClick={() => setEditing(c)}>✎ Изменить</button>
+                    <button className={styles.iconBtn + ' ' + styles.del} onClick={() => handleDelete(c.id)}>✕ Удалить</button>
                   </div>
 
                   {(monthPlan > 0 || c.reach_plan > 0) && (

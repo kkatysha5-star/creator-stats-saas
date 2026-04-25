@@ -310,6 +310,46 @@ export function DatePicker({ value, onChange, placeholder = 'Дата' }) {
   );
 }
 
+// ─── Compare Selector ────────────────────────────────────────────────────────
+export const COMPARE_OPTIONS = [
+  { value: 'prev_period', label: 'Прошлый период' },
+  { value: 'prev_week',   label: 'Прошлая неделя' },
+  { value: 'prev_month',  label: 'Прошлый месяц'  },
+  { value: 'custom',      label: 'Свой период'    },
+  { value: 'off',         label: 'Без сравнения'  },
+];
+
+export function CompareSelector({ value, onChange, customFrom = '', customTo = '', onCustomChange }) {
+  const selectStyle = {
+    background: 'var(--bg3)', border: '1px solid var(--border2)',
+    borderRadius: 'var(--radius-pill)', color: value === 'off' ? 'var(--text3)' : 'var(--text2)',
+    fontFamily: 'var(--font)', fontSize: '13px', fontWeight: 500,
+    padding: '6px 28px 6px 12px', outline: 'none', cursor: 'pointer',
+    appearance: 'none', WebkitAppearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center',
+  };
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 600, letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
+        Сравнить с
+      </span>
+      <select value={value} onChange={e => onChange(e.target.value)} style={selectStyle}>
+        {COMPARE_OPTIONS.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      {value === 'custom' && (
+        <>
+          <DatePicker value={customFrom} onChange={v => onCustomChange?.(v, customTo)} placeholder="С" />
+          <span style={{ color: 'var(--text3)', fontSize: 13 }}>—</span>
+          <DatePicker value={customTo} onChange={v => onCustomChange?.(customFrom, v)} placeholder="По" />
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Period Tabs ──────────────────────────────────────────────────────────────
 export const PERIODS = [
   { id: 'month',     label: 'Этот месяц' },

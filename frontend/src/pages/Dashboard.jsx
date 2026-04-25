@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
-import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta } from '../lib/utils.js';
-import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Loader, Empty, ProgressBar, CircularProgress } from '../components/UI.jsx';
+import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta, planColor } from '../lib/utils.js';
+import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Loader, Empty, ProgressBar, CircularProgress, CompareSelector } from '../components/UI.jsx';
 import { useAuth } from '../App.jsx';
 import styles from './Dashboard.module.css';
 
@@ -21,6 +21,8 @@ export default function Dashboard() {
   const [prevByCreator, setPrevByCreator] = useState([]);
   const [funnelPayouts, setFunnelPayouts] = useState({});
   const [compareWith, setCompareWith] = useState('prev_period');
+  const [compareCustomFrom, setCompareCustomFrom] = useState('');
+  const [compareCustomTo, setCompareCustomTo] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeMetric, setActiveMetric] = useState(null);
   const [rankTab, setRankTab] = useState('views');
@@ -31,7 +33,7 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const dates = periodToDates(period, customFrom, customTo);
-      const prevDates = getCompareDates(compareWith, period, customFrom, customTo);
+      const prevDates = getCompareDates(compareWith, period, customFrom, customTo, compareCustomFrom, compareCustomTo);
 
       const requests = [
         api.getSummary({ ...dates, platform: 'youtube' }),
@@ -79,7 +81,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [period, customFrom, customTo, compareWith, isPro]);
+  }, [period, customFrom, customTo, compareWith, compareCustomFrom, compareCustomTo, isPro]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -146,7 +148,11 @@ export default function Dashboard() {
       <div className={styles.toolbar}>
         <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo}
           onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t); }} />
-        <CompareSelect value={compareWith} onChange={setCompareWith} />
+        <CompareSelector
+          value={compareWith} onChange={setCompareWith}
+          customFrom={compareCustomFrom} customTo={compareCustomTo}
+          onCustomChange={(f,t)=>{ setCompareCustomFrom(f); setCompareCustomTo(t); }}
+        />
         <div className={styles.platFilters}>
           {['youtube', 'tiktok', 'instagram'].map(p => {
             const { label, color } = platformMeta(p);
@@ -170,7 +176,7 @@ export default function Dashboard() {
           {/* ── Метрики ──────────────────────────────────────────── */}
           {hasPrev && (
             <div className={styles.compareLabel}>
-              ↔ сравнение: {COMPARE_LABELS[compareWith]}
+              ↔ сравнение: {COMPARE_OPTIONS.find(o => o.value === compareWith)?.label}
             </div>
           )}
           <div className={styles.metrics}>
@@ -260,10 +266,9 @@ export default function Dashboard() {
                   <div className={styles.planTileLabel}>🎬 Ролики</div>
                   <div className={styles.planTileCenter}>
                     <div className={styles.planCircleWrap}>
-                      <CircularProgress pct={videoPct} size={96} stroke={7} />
+                      <CircularProgress pct={videoPct} size={96} stroke={7} color={planColor(videoPct)} />
                       <div className={styles.planCircleInner}>
-                        <span className={styles.planCirclePct}
-                          style={{ color: videoPct >= 70 ? '#4ade80' : videoPct >= 40 ? '#ff6a00' : '#f87171' }}>
+                        <span className={styles.planCirclePct} style={{ color: planColor(videoPct) }}>
                           {videoPct}%
                         </span>
                       </div>
@@ -284,10 +289,9 @@ export default function Dashboard() {
                   <div className={styles.planTileLabel}>👁 Охваты</div>
                   <div className={styles.planTileCenter}>
                     <div className={styles.planCircleWrap}>
-                      <CircularProgress pct={reachPct} size={96} stroke={7} />
+                      <CircularProgress pct={reachPct} size={96} stroke={7} color={planColor(reachPct)} />
                       <div className={styles.planCircleInner}>
-                        <span className={styles.planCirclePct}
-                          style={{ color: reachPct >= 70 ? '#4ade80' : reachPct >= 40 ? '#ff6a00' : '#f87171' }}>
+                        <span className={styles.planCirclePct} style={{ color: planColor(reachPct) }}>
                           {reachPct}%
                         </span>
                       </div>
@@ -310,7 +314,7 @@ export default function Dashboard() {
                     {creatorsWithPlan.map(c => {
                       const mp = c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0);
                       const pct = Math.min(Math.round((c.total_videos||0) / mp * 100), 100);
-                      const color = pct >= 70 ? '#4ade80' : pct >= 40 ? '#ff6a00' : '#f87171';
+                      const color = planColor(pct);
                       return (
                         <div key={c.creator_id} className={styles.planCreatorItem}
                           onClick={() => navigate(`/creator/${c.creator_id}`)}>
@@ -350,48 +354,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-const COMPARE_OPTIONS = [
-  { value: 'prev_period', label: 'Прошлый период' },
-  { value: 'prev_week',   label: 'Прошлая неделя' },
-  { value: 'prev_month',  label: 'Прошлый месяц'  },
-  { value: 'off',         label: 'Без сравнения'  },
-];
-const COMPARE_LABELS = Object.fromEntries(COMPARE_OPTIONS.map(o => [o.value, o.label]));
-
-function CompareSelect({ value, onChange }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, letterSpacing: '0.4px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>vs</span>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{
-          background: 'var(--bg3)',
-          border: '1px solid var(--border2)',
-          borderRadius: 'var(--radius-pill)',
-          color: value === 'off' ? 'var(--text3)' : 'var(--text2)',
-          fontFamily: 'var(--font)',
-          fontSize: '12.5px',
-          fontWeight: 500,
-          padding: '5px 12px',
-          outline: 'none',
-          cursor: 'pointer',
-          appearance: 'none',
-          WebkitAppearance: 'none',
-          paddingRight: 28,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`,
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'right 10px center',
-        }}
-      >
-        {COMPARE_OPTIONS.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
     </div>
   );
 }
@@ -501,6 +463,8 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
         const videoPct = mp > 0 ? Math.min(Math.round((c.total_videos||0) / mp * 100), 100) : null;
         const reachPct = c.reach_plan > 0 ? Math.min(Math.round((c.total_views||0) / c.reach_plan * 100), 100) : null;
         const sched = scheduleStatus(c);
+        const vColor = videoPct != null ? planColor(videoPct) : 'var(--text3)';
+        const rColor = reachPct != null ? planColor(reachPct) : 'var(--text3)';
         const dv = (curr, p) => hasPrev && prev ? calcDelta(curr, p) : null;
 
         return (
@@ -519,7 +483,7 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
                   <>
                     <span className={styles.planCellMain}>
                       {c.total_videos||0}<span className={styles.planCellSep}>/</span>{mp}
-                      <span className={styles.planCellPct} style={{ color: videoPct >= 70 ? '#4ade80' : videoPct >= 40 ? '#ff6a00' : '#f87171' }}>{videoPct}%</span>
+                      <span className={styles.planCellPct} style={{ color: vColor }}>{videoPct}%</span>
                     </span>
                     {sched && (
                       <span className={styles.planCellStatus} style={{ color: sched.ok ? '#4ade80' : '#f87171' }}>
@@ -537,7 +501,7 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
                     <span className={styles.planCellMain}>
                       {fmtNum(c.total_views||0)}<span className={styles.planCellSep}>/</span>{fmtNum(c.reach_plan)}
                     </span>
-                    <span className={styles.planCellPct} style={{ color: reachPct >= 70 ? '#4ade80' : reachPct >= 40 ? '#ff6a00' : '#f87171' }}>{reachPct}%</span>
+                    <span className={styles.planCellPct} style={{ color: rColor }}>{reachPct}%</span>
                   </>
                 ) : <span style={{ color: 'var(--text3)' }}>—</span>}
               </div>

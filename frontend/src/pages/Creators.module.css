@@ -2,8 +2,8 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px;
   padding: 0 28px;
 }
 
@@ -12,66 +12,103 @@
   border: 1px solid var(--card-border);
   border-top: 1px solid var(--card-border-top);
   border-radius: var(--radius);
-  padding: 18px;
+  padding: 20px;
   position: relative;
   overflow: hidden;
   transition: border-top-color 150ms, background 150ms;
-  cursor: default;
 }
 .card:hover {
   border-top-color: var(--card-hover-top);
   background: var(--card-hover-bg), var(--card-bg);
 }
 
-.cardTop { display: flex; align-items: center; gap: 12px; }
-.cardInfo { flex: 1; overflow: hidden; }
-.name { font-size: 14px; font-weight: 700; color: var(--text); }
-.username { font-size: 12px; color: var(--text3); margin-top: 2px; font-weight: 400; }
-
-.cardActions { display: flex; gap: 4px; opacity: 0; transition: opacity 150ms; }
-.card:hover .cardActions { opacity: 1; }
-.iconBtn {
-  width: 28px; height: 28px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text3);
-  font-size: 13px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 150ms;
+.cardTop { display: flex; align-items: flex-start; gap: 14px; }
+.cardInfo { flex: 1; min-width: 0; }
+.name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
 }
-.iconBtn:hover { background: rgba(255,255,255,0.07); color: var(--text); border-color: var(--border2); }
-.del:hover { color: #f87171 !important; border-color: rgba(248,113,113,.3) !important; }
+.username { font-size: 13px; color: var(--text3); margin-top: 3px; font-weight: 400; }
+
+/* Кнопки — всегда видны, расположены под именем */
+.cardActions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+.iconBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border2);
+  background: rgba(255,255,255,0.04);
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 150ms;
+  white-space: nowrap;
+}
+.iconBtn:hover {
+  background: rgba(255,255,255,0.09);
+  color: var(--text);
+  border-color: var(--border2);
+}
+.del {
+  border-color: rgba(248,113,113,0.2);
+  color: #f87171;
+  background: rgba(248,113,113,0.06);
+}
+.del:hover {
+  background: rgba(248,113,113,0.14) !important;
+  border-color: rgba(248,113,113,0.35) !important;
+  color: #f87171 !important;
+}
+
+[data-theme="light"] .iconBtn {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.12);
+  color: var(--text2);
+}
+[data-theme="light"] .iconBtn:hover { background: rgba(0,0,0,0.08); }
 
 .colorDot {
   position: absolute;
-  bottom: -10px; right: -10px;
-  width: 56px; height: 56px;
+  bottom: -14px; right: -14px;
+  width: 64px; height: 64px;
   border-radius: 50%;
-  opacity: 0.1;
+  opacity: 0.08;
   pointer-events: none;
 }
 
 .plans {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 .planItem {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
+  font-size: 13px;
 }
 .planLabel { color: var(--text3); font-weight: 500; }
-.planVal { color: var(--text2); font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; }
-.planSub { color: var(--text3); font-size: 11px; }
+.planVal { color: var(--text2); font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.planSub { color: var(--text3); font-size: 12px; }
 
 @media (max-width: 768px) {
-  .grid { padding: 0 16px; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .cardActions { opacity: 1; }
+  .grid { padding: 0 16px; grid-template-columns: 1fr; gap: 10px; }
 }

@@ -43,10 +43,15 @@ export function periodToPrevDates(period) {
   return null;
 }
 
-// compareMode: 'off' | 'prev_week' | 'prev_month' | 'prev_period'
+// compareMode: 'off' | 'prev_week' | 'prev_month' | 'prev_period' | 'custom'
 // Возвращает диапазон дат для сравнения относительно начала текущего периода
-export function getCompareDates(compareMode, period, customFrom, customTo) {
+export function getCompareDates(compareMode, period, customFrom, customTo, compareCustomFrom, compareCustomTo) {
   if (!compareMode || compareMode === 'off') return null;
+
+  if (compareMode === 'custom') {
+    if (!compareCustomFrom && !compareCustomTo) return null;
+    return { from: compareCustomFrom || undefined, to: compareCustomTo || undefined };
+  }
 
   if (compareMode === 'prev_period') {
     return periodToPrevDates(period);
@@ -78,6 +83,13 @@ export function getCompareDates(compareMode, period, customFrom, customTo) {
 export function calcDelta(curr, prev) {
   if (curr == null || prev == null || prev === 0) return null;
   return (curr - prev) / prev * 100;
+}
+
+// Цвет выполнения плана — НЕ красный/оранжевый (они зарезервированы для падений)
+export function planColor(pct) {
+  if (pct >= 70) return '#4ade80';  // зелёный — хорошо
+  if (pct >= 40) return '#38bdf8';  // голубой — идём
+  return '#94a3b8';                  // серый — начало пути
 }
 
 export function periodToDates(period, customFrom, customTo) {
