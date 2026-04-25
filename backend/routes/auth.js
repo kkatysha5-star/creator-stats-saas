@@ -11,12 +11,11 @@ router.get('/google', passport.authenticate('google', {
 
 // Callback после Google
 router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: '/login?error=auth_failed' }),
+  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND_URL}/login?error=auth_failed` }),
   async (req, res) => {
     try {
       const user = req.user;
 
-      // Проверяем есть ли у пользователя воркспейс
       const wsResult = await db.execute({
         sql: `SELECT w.* FROM workspaces w
               JOIN workspace_members wm ON wm.workspace_id = w.id
@@ -25,14 +24,12 @@ router.get('/google/callback',
       });
 
       if (wsResult.rows.length === 0) {
-        // Нет воркспейса — отправляем на создание
-        res.redirect('/onboarding');
+        res.redirect(`${process.env.FRONTEND_URL}/onboarding`);
       } else {
-        // Есть воркспейс — на дашборд
-        res.redirect('/');
+        res.redirect(`${process.env.FRONTEND_URL}/`);
       }
     } catch (err) {
-      res.redirect('/login?error=server_error');
+      res.redirect(`${process.env.FRONTEND_URL}/login?error=server_error`);
     }
   }
 );
