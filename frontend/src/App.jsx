@@ -145,12 +145,7 @@ function AppLayout({ auth }) {
       <div className="app-body">
         <aside className="sidebar">
           <div className="sidebar-logo">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <rect x="1" y="1" width="8.5" height="8.5" rx="2.5" fill="#ff6a00" opacity="0.9"/>
-              <rect x="12" y="1" width="8.5" height="8.5" rx="2.5" fill="#ff6a00" opacity="0.45"/>
-              <rect x="1" y="12" width="8.5" height="8.5" rx="2.5" fill="#ff6a00" opacity="0.45"/>
-              <rect x="12" y="12" width="8.5" height="8.5" rx="2.5" fill="#ff6a00" opacity="0.7"/>
-            </svg>
+            <div style={{background:'#ff6a00',borderRadius:'10px',width:'40px',height:'40px',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontWeight:700,fontSize:'16px'}}>КМ</div>
             <span>КонтентМетрика</span>
           </div>
           <nav>

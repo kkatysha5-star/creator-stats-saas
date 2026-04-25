@@ -38,14 +38,9 @@ export default function Onboarding() {
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <div className={styles.logo}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="2" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.9"/>
-              <rect x="13" y="2" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.5"/>
-              <rect x="2" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.5"/>
-              <rect x="13" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.7"/>
-            </svg>
-            <span className={styles.logoText}>КонтентМетрика</span>
+          <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+            <div style={{background:'#ff6a00',borderRadius:'10px',width:'40px',height:'40px',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontWeight:700,fontSize:'16px'}}>КМ</div>
+            <span style={{color:'white',fontSize:'20px',fontWeight:700}}>КонтентМетрика</span>
           </div>
 
           <h1 className={styles.title}>Кто вы?</h1>
@@ -117,14 +112,9 @@ export default function Onboarding() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={styles.logo}>
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-            <rect x="2" y="2" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.9"/>
-            <rect x="13" y="2" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.5"/>
-            <rect x="2" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.5"/>
-            <rect x="13" y="13" width="9" height="9" rx="2" fill="var(--accent)" opacity="0.7"/>
-          </svg>
-          <span className={styles.logoText}>КонтентМетрика</span>
+        <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+          <div style={{background:'#ff6a00',borderRadius:'10px',width:'40px',height:'40px',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontWeight:700,fontSize:'16px'}}>КМ</div>
+          <span style={{color:'white',fontSize:'20px',fontWeight:700}}>КонтентМетрика</span>
         </div>
 
         <h1 className={styles.title}>Создайте свой контент-завод</h1>
