@@ -221,7 +221,7 @@ export default function Dashboard() {
                           </span>
                           <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             {delta != null && (
-                              <span style={{ fontSize: 11, fontWeight: 700, color: delta > 0 ? '#4ade80' : '#f87171' }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: delta > 0 ? 'var(--color-ok)' : 'var(--color-bad)' }}>
                                 {delta > 0 ? '↑' : '↓'}{Math.abs(delta).toFixed(1)}%
                               </span>
                             )}
@@ -291,7 +291,7 @@ export default function Dashboard() {
                     </div>
                     <span className={styles.planTileSub}>факт / план</span>
                     {videoTileStatus && (
-                      <span className={styles.planTileStatus} style={{ color: videoTileStatus.ok ? '#4ade80' : '#f87171' }}>
+                      <span className={styles.planTileStatus} style={{ color: videoTileStatus.ok ? 'var(--color-ok)' : 'var(--color-bad)' }}>
                         {videoTileStatus.ok ? '✓ в графике' : `↓ ${videoTileStatus.behind} ${videoTileStatus.behind === 1 ? 'отстаёт' : 'отстают'}`}
                       </span>
                     )}
@@ -319,7 +319,7 @@ export default function Dashboard() {
                     </div>
                     <span className={styles.planTileSub}>просм. / план</span>
                     {reachTileStatus && (
-                      <span className={styles.planTileStatus} style={{ color: reachTileStatus.ok ? '#4ade80' : '#f87171' }}>
+                      <span className={styles.planTileStatus} style={{ color: reachTileStatus.ok ? 'var(--color-ok)' : 'var(--color-bad)' }}>
                         {reachTileStatus.ok ? '✓ в графике' : '↓ отстаёт'}
                       </span>
                     )}
@@ -508,7 +508,7 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
                       <span className={styles.planCellPct} style={{ color: vColor }}>{videoPct}%</span>
                     </span>
                     {sched && (
-                      <span className={styles.planCellStatus} style={{ color: sched.ok ? '#4ade80' : '#f87171' }}>
+                      <span className={styles.planCellStatus} style={{ color: sched.ok ? 'var(--color-ok)' : 'var(--color-bad)' }}>
                         {sched.ok
                           ? `✓ в графике${sched.delta > 0 ? ` (+${sched.delta})` : ''}`
                           : `↓ отстаёт на ${Math.abs(sched.delta)} ${pluralVideos(sched.delta)}`}
@@ -527,7 +527,7 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
                     </span>
                     <span className={styles.planCellPct} style={{ color: rColor }}>{reachPct}%</span>
                     {rSched && (
-                      <span className={styles.planCellStatus} style={{ color: rSched.ok ? '#4ade80' : '#f87171' }}>
+                      <span className={styles.planCellStatus} style={{ color: rSched.ok ? 'var(--color-ok)' : 'var(--color-bad)' }}>
                         {rSched.ok ? '✓ в графике' : `↓ отстаёт на ${fmtNum(Math.abs(rSched.delta))}`}
                       </span>
                     )}
@@ -555,7 +555,7 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
 function DeltaInline({ val }) {
   if (val == null) return null;
   return (
-    <span style={{ fontSize: 10, fontWeight: 700, color: val > 0 ? '#4ade80' : '#f87171', marginLeft: 4, whiteSpace: 'nowrap' }}>
+    <span style={{ fontSize: 10, fontWeight: 700, color: val > 0 ? 'var(--color-ok)' : 'var(--color-bad)', marginLeft: 4, whiteSpace: 'nowrap' }}>
       {val > 0 ? '↑' : '↓'}{Math.abs(val).toFixed(1)}%
     </span>
   );

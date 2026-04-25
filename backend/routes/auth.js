@@ -56,6 +56,19 @@ router.get('/me', async (req, res) => {
   }
 });
 
+// Обновление профиля
+router.put('/me', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const { name } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Имя не может быть пустым' });
+  try {
+    await db.execute({ sql: 'UPDATE users SET name = ? WHERE id = ?', args: [name.trim(), req.user.id] });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Выход
 router.post('/logout', (req, res) => {
   req.logout(() => {

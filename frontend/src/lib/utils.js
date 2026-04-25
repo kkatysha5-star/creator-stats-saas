@@ -110,9 +110,9 @@ export function reachScheduleStatus(periodStart, reachPlan, totalViews) {
 
 // Цвет выполнения плана — НЕ красный/оранжевый (они зарезервированы для падений)
 export function planColor(pct) {
-  if (pct >= 70) return '#4ade80';  // зелёный — хорошо
-  if (pct >= 40) return '#38bdf8';  // голубой — идём
-  return '#94a3b8';                  // серый — начало пути
+  if (pct >= 70) return 'var(--color-ok)';
+  if (pct >= 40) return 'var(--color-warn)';
+  return 'var(--color-neutral)';
 }
 
 export function periodToDates(period, customFrom, customTo) {

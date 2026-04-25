@@ -34,6 +34,24 @@ export default function Settings() {
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
 
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState(user?.name || '');
+  const [savingName, setSavingName] = useState(false);
+
+  const handleSaveName = async () => {
+    if (!newName.trim()) return;
+    setSavingName(true);
+    try {
+      await api.updateMe({ name: newName.trim() });
+      setAuth(prev => ({ ...prev, user: { ...prev.user, name: newName.trim() } }));
+      setEditingName(false);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   const [setupRole, setSetupRole] = useState('');
   const [setupName, setSetupName] = useState('');
   const [setupStep, setSetupStep] = useState(workspace ? 'done' : 'role');
@@ -165,8 +183,29 @@ export default function Settings() {
               ? <img src={user.avatar} className={styles.avatar} alt={user.name} />
               : <Avatar name={user?.name || '?'} color="var(--accent)" size={48} />
             }
-            <div>
-              <div className={styles.profileName}>{user?.name}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {editingName ? (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 4 }}>
+                  <input
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
+                    autoFocus
+                    style={{ flex: 1, minWidth: 80, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontFamily: 'var(--font)', fontSize: 14, fontWeight: 600, padding: '5px 10px', outline: 'none' }}
+                  />
+                  <Btn variant="primary" onClick={handleSaveName} loading={savingName} small>Сохранить</Btn>
+                  <Btn onClick={() => { setEditingName(false); setNewName(user?.name || ''); }} small>Отмена</Btn>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <div className={styles.profileName}>{user?.name}</div>
+                  <button
+                    onClick={() => { setEditingName(true); setNewName(user?.name || ''); }}
+                    title="Изменить имя"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: '1px 4px', borderRadius: 4, lineHeight: 1 }}
+                  >✏️</button>
+                </div>
+              )}
               <div className={styles.profileEmail}>{user?.email}</div>
             </div>
           </div>
