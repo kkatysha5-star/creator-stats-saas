@@ -34,7 +34,7 @@
 @media (max-width: 1100px) { .metrics { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 640px)  { .metrics { grid-template-columns: repeat(2, 1fr); padding: 0 16px 20px; gap: 8px; } }
 
-/* ── Platform bars ──────────────────────────────────────────────────────── */
+/* ── Section ────────────────────────────────────────────────────────────── */
 .section { padding: 0 28px; margin-bottom: 28px; }
 @media (max-width: 768px) { .section { padding: 0 16px; } }
 
@@ -86,9 +86,18 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  padding: 0 28px 28px;
+  padding: 0 28px 14px;
 }
-@media (max-width: 900px) { .twoCol { grid-template-columns: 1fr; padding: 0 16px 20px; } }
+@media (max-width: 900px) { .twoCol { grid-template-columns: 1fr; padding: 0 16px 14px; } }
+
+/* ── Platform bars (inside twoCol card) ─────────────────────────────────── */
+.platBarsCard {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-top: 1px solid var(--card-border-top);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
 
 /* ── Ranking ────────────────────────────────────────────────────────────── */
 .rankBlock {
@@ -181,8 +190,23 @@
   flex-shrink: 0;
 }
 
-/* ── Plan/Fact block ────────────────────────────────────────────────────── */
-.planBlock {
+/* ── Plan grid — три плитки ─────────────────────────────────────────────── */
+.planGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.6fr;
+  gap: 14px;
+  padding: 0 28px 28px;
+}
+@media (max-width: 1100px) {
+  .planGrid { grid-template-columns: 1fr 1fr; }
+  .planTileWide { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .planGrid { grid-template-columns: 1fr; padding: 0 16px 20px; }
+  .planTileWide { grid-column: auto; }
+}
+
+.planTile {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-top: 1px solid var(--card-border-top);
@@ -193,14 +217,126 @@
   gap: 14px;
 }
 
-.planRow { display: flex; flex-direction: column; gap: 6px; }
-.planRowTop { display: flex; justify-content: space-between; align-items: center; }
-.planLabel { font-size: 12.5px; font-weight: 600; color: var(--text2); }
-.planVals { font-size: 12px; color: var(--text3); font-variant-numeric: tabular-nums; font-weight: 500; }
-.planPct { font-size: 11px; font-weight: 700; text-align: right; }
+.planTileLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
 
-.planCreatorRow { display: flex; flex-direction: column; gap: 5px; padding-top: 10px; border-top: 1px solid var(--border); }
-.planCreatorTop { display: flex; justify-content: space-between; align-items: center; }
+.planTileCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.planCircleWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.planCircleInner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.planCirclePct {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+
+.planTileStats {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.planTileFact { font-size: 20px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
+.planTileSep  { font-size: 14px; color: var(--text3); }
+.planTilePlan { font-size: 14px; color: var(--text3); font-variant-numeric: tabular-nums; font-weight: 500; }
+.planTileSub  { font-size: 11px; color: var(--text3); font-weight: 500; }
+
+/* Плитка 3: по креаторам */
+.planCreatorList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.planCreatorItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 150ms;
+}
+.planCreatorItem:hover { background: rgba(255,255,255,0.04); }
+[data-theme="light"] .planCreatorItem:hover { background: rgba(0,0,0,0.04); }
+
+.planCreatorLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 0 0 auto;
+  max-width: 45%;
+}
+.planCreatorName {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.planCreatorRight {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.planCreatorCount {
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.planMiniBar {
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px;
+  overflow: hidden;
+  min-width: 40px;
+}
+[data-theme="light"] .planMiniBar { background: rgba(0,0,0,0.07); }
+.planMiniFill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 600ms cubic-bezier(.4,0,.2,1);
+}
+.planCreatorPct {
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  min-width: 30px;
+  text-align: right;
+}
 
 /* ── Creators table ─────────────────────────────────────────────────────── */
 .creatorsTable {

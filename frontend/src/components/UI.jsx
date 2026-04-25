@@ -173,6 +173,25 @@ export function Loader({ type = 'cards', rows = 4 }) {
   );
 }
 
+// ─── Circular Progress ───────────────────────────────────────────────────────
+export function CircularProgress({ pct = 0, size = 88, stroke = 7, color }) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const clamped = Math.min(Math.max(pct, 0), 100);
+  const dash = (clamped / 100) * circ;
+  const trackColor = 'rgba(255,255,255,0.06)';
+  const fillColor = color || (clamped >= 70 ? '#4ade80' : clamped >= 40 ? '#ff6a00' : '#f87171');
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={trackColor} strokeWidth={stroke} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={fillColor} strokeWidth={stroke}
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 700ms cubic-bezier(.4,0,.2,1)' }}
+      />
+    </svg>
+  );
+}
+
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
 export function ProgressBar({ pct, color }) {
   const gradients = {

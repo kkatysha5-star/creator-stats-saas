@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { fmtNum, fmtEr, platformMeta, periodToDates, periodToPrevDates, calcDelta } from '../lib/utils.js';
-import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Loader, Empty, ProgressBar } from '../components/UI.jsx';
+import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Loader, Empty, ProgressBar, CircularProgress } from '../components/UI.jsx';
 import { useAuth } from '../App.jsx';
 import styles from './Dashboard.module.css';
 
@@ -68,8 +68,8 @@ export default function Dashboard() {
         const periods = results[results.length - 1] || [];
         const map = {};
         periods.forEach(p => {
-          const id = p.creator_id;
-          map[id] = (map[id] || 0) + (parseFloat(p.payout) || 0);
+          const cid = p.creator_id;
+          map[cid] = (map[cid] || 0) + (parseFloat(p.payout) || 0);
         });
         setFunnelPayouts(map);
       }
@@ -92,22 +92,26 @@ export default function Dashboard() {
   };
 
   const activePlats = ['youtube', 'tiktok', 'instagram'].filter(p => platforms.has(p));
+
   const sumPlats = (obj) => activePlats.reduce((acc, p) => {
     const s = obj[p] || {};
     return {
-      total_views:    (acc.total_views    || 0) + (s.total_views    || 0),
-      total_likes:    (acc.total_likes    || 0) + (s.total_likes    || 0),
-      total_comments: (acc.total_comments || 0) + (s.total_comments || 0),
-      total_shares:   (acc.total_shares   || 0) + (s.total_shares   || 0),
+      total_views:    (acc.total_views    || 0) + (Number(s.total_views)    || 0),
+      total_likes:    (acc.total_likes    || 0) + (Number(s.total_likes)    || 0),
+      total_comments: (acc.total_comments || 0) + (Number(s.total_comments) || 0),
+      total_shares:   (acc.total_shares   || 0) + (Number(s.total_shares)   || 0),
     };
   }, {});
 
-  const summary = sumPlats(summaryByPlat);
+  const summary     = sumPlats(summaryByPlat);
   const prevSummary = sumPlats(prevSummaryByPlat);
 
-  const allViews = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (summaryByPlat[p]?.total_views || 0), 0);
+  const allViews = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (Number(summaryByPlat[p]?.total_views) || 0), 0);
   const avgEr = byCreator.filter(c => c.avg_er > 0).reduce((s, c, _, a) => s + parseFloat(c.avg_er || 0) / a.length, 0);
   const prevAvgEr = prevByCreator.filter(c => c.avg_er > 0).reduce((s, c, _, a) => s + parseFloat(c.avg_er || 0) / a.length, 0);
+
+  // hasPrev: только когда в предыдущем периоде реально есть данные
+  const hasPrev = ['youtube', 'tiktok', 'instagram'].some(p => (Number(prevSummaryByPlat[p]?.total_views) || 0) > 0);
 
   const totalVideoPlan = byCreator.reduce((s, c) => s + (c.video_plan_period === 'week' ? (c.video_plan_count || 0) * 4 : (c.video_plan_count || 0)), 0);
   const totalReachPlan = byCreator.reduce((s, c) => s + (c.reach_plan || 0), 0);
@@ -116,15 +120,16 @@ export default function Dashboard() {
   const videoPct = totalVideoPlan > 0 ? Math.min(Math.round(totalVideos / totalVideoPlan * 100), 100) : null;
 
   const filteredCreators = byCreator.filter(c => c.platforms?.split(',').some(p => platforms.has(p)));
+  const creatorsWithPlan = byCreator.filter(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0);
 
-  const hasPrev = Object.keys(prevSummaryByPlat).length > 0;
+  const d = (curr, prev) => hasPrev ? calcDelta(curr, prev) : null;
 
   const metrics = [
-    { id: 'views',    label: 'Просмотры',   raw: summary.total_views,    fmt: fmtNum(summary.total_views),    sub: `${totalVideos} роликов`, delta: hasPrev ? calcDelta(summary.total_views, prevSummary.total_views) : null },
-    { id: 'likes',    label: 'Лайки',       raw: summary.total_likes,    fmt: fmtNum(summary.total_likes),    delta: hasPrev ? calcDelta(summary.total_likes, prevSummary.total_likes) : null },
-    { id: 'comments', label: 'Комментарии', raw: summary.total_comments, fmt: fmtNum(summary.total_comments), delta: hasPrev ? calcDelta(summary.total_comments, prevSummary.total_comments) : null },
-    { id: 'shares',   label: 'Репосты',     raw: summary.total_shares,   fmt: fmtNum(summary.total_shares),   delta: hasPrev ? calcDelta(summary.total_shares, prevSummary.total_shares) : null },
-    { id: 'er',       label: 'Средний ER',  raw: null,                   fmt: fmtEr(avgEr),                   delta: hasPrev ? calcDelta(avgEr, prevAvgEr) : null },
+    { id: 'views',    label: 'Просмотры',   raw: summary.total_views,    fmt: fmtNum(summary.total_views),    sub: `${totalVideos} роликов`, delta: d(summary.total_views, prevSummary.total_views) },
+    { id: 'likes',    label: 'Лайки',       raw: summary.total_likes,    fmt: fmtNum(summary.total_likes),    delta: d(summary.total_likes, prevSummary.total_likes) },
+    { id: 'comments', label: 'Комментарии', raw: summary.total_comments, fmt: fmtNum(summary.total_comments), delta: d(summary.total_comments, prevSummary.total_comments) },
+    { id: 'shares',   label: 'Репосты',     raw: summary.total_shares,   fmt: fmtNum(summary.total_shares),   delta: d(summary.total_shares, prevSummary.total_shares) },
+    { id: 'er',       label: 'Средний ER',  raw: null,                   fmt: fmtEr(avgEr),                   delta: d(avgEr, prevAvgEr) },
   ];
 
   const rankTabs = [
@@ -138,7 +143,8 @@ export default function Dashboard() {
       <PageHeader title="Дашборд" subtitle="Сводная статистика по всем креаторам" />
 
       <div className={styles.toolbar}>
-        <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t); }} />
+        <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo}
+          onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t); }} />
         <div className={styles.platFilters}>
           {['youtube', 'tiktok', 'instagram'].map(p => {
             const { label, color } = platformMeta(p);
@@ -159,7 +165,7 @@ export default function Dashboard() {
       {loading ? <Loader rows={5} /> : (
         <div className="fade-in">
 
-          {/* ── Метрики ──────────────────────────────────────────────── */}
+          {/* ── Метрики ──────────────────────────────────────────── */}
           <div className={styles.metrics}>
             {metrics.map(m => (
               <MetricCard key={m.id} label={m.label} value={m.fmt} rawValue={m.raw}
@@ -170,46 +176,45 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* ── Просмотры по платформам ───────────────────────────── */}
-          {allViews > 0 && (
-            <div className={styles.section}>
-              <h2 className={styles.sectionTitle}>Просмотры по платформам</h2>
-              <div className={styles.platBars}>
-                {['youtube', 'tiktok', 'instagram'].map(p => {
-                  const { label, color } = platformMeta(p);
-                  const views = summaryByPlat[p]?.total_views || 0;
-                  const prevViews = prevSummaryByPlat[p]?.total_views || 0;
-                  if (!views) return null;
-                  const pct = allViews > 0 ? Math.round(views / allViews * 100) : 0;
-                  const d = hasPrev ? calcDelta(views, prevViews) : null;
-                  return (
-                    <div key={p} className={styles.platBarRow}>
-                      <div className={styles.platBarMeta}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 7, color, fontWeight: 600, fontSize: 13 }}>
-                          <PlatformDot platform={p} /> {label}
-                        </span>
-                        <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                          {d != null && (
-                            <span style={{ fontSize: 11, fontWeight: 700, color: d > 0 ? '#4ade80' : '#f87171' }}>
-                              {d > 0 ? '↑' : '↓'}{Math.abs(d).toFixed(1)}%
-                            </span>
-                          )}
-                          <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: 13, color: 'var(--text2)', fontWeight: 600 }}>{fmtNum(views)}</span>
-                          <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 600, minWidth: 32, textAlign: 'right' }}>{pct}%</span>
-                        </span>
-                      </div>
-                      <div className={styles.platProgressTrack}>
-                        <div className={styles.platProgressFill} style={{ width: pct + '%', background: color }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* ── Рейтинг + План/Факт ──────────────────────────────── */}
+          {/* ── Платформы + Рейтинг ──────────────────────────────── */}
           <div className={styles.twoCol}>
+            {allViews > 0 && (
+              <div className={styles.platBarsCard}>
+                <h2 className={styles.sectionTitle}>Просмотры по платформам</h2>
+                <div className={styles.platBars}>
+                  {['youtube', 'tiktok', 'instagram'].map(p => {
+                    const { label, color } = platformMeta(p);
+                    const views = Number(summaryByPlat[p]?.total_views) || 0;
+                    const prevViews = Number(prevSummaryByPlat[p]?.total_views) || 0;
+                    if (!views) return null;
+                    const pct = allViews > 0 ? Math.round(views / allViews * 100) : 0;
+                    const delta = hasPrev ? calcDelta(views, prevViews) : null;
+                    return (
+                      <div key={p} className={styles.platBarRow}>
+                        <div className={styles.platBarMeta}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 7, color, fontWeight: 600, fontSize: 13 }}>
+                            <PlatformDot platform={p} /> {label}
+                          </span>
+                          <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            {delta != null && (
+                              <span style={{ fontSize: 11, fontWeight: 700, color: delta > 0 ? '#4ade80' : '#f87171' }}>
+                                {delta > 0 ? '↑' : '↓'}{Math.abs(delta).toFixed(1)}%
+                              </span>
+                            )}
+                            <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: 13, color: 'var(--text2)', fontWeight: 600 }}>{fmtNum(views)}</span>
+                            <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 600, minWidth: 30, textAlign: 'right' }}>{pct}%</span>
+                          </span>
+                        </div>
+                        <div className={styles.platProgressTrack}>
+                          <div className={styles.platProgressFill} style={{ width: pct + '%', background: color }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {filteredCreators.length > 0 && (
               <div className={styles.rankBlock}>
                 <div className={styles.rankHeader}>
@@ -236,48 +241,91 @@ export default function Dashboard() {
                 }
               </div>
             )}
-
-            {(videoPct !== null || reachPct !== null) && (
-              <div className={styles.planBlock}>
-                <h2 className={styles.sectionTitle}>План / Факт</h2>
-                {videoPct !== null && (
-                  <div className={styles.planRow}>
-                    <div className={styles.planRowTop}>
-                      <span className={styles.planLabel}>🎬 Ролики</span>
-                      <span className={styles.planVals}>{totalVideos} / {totalVideoPlan}</span>
-                    </div>
-                    <ProgressBar pct={videoPct} />
-                    <span className={styles.planPct} style={{ color: videoPct >= 70 ? '#4ade80' : videoPct >= 40 ? '#ff6a00' : '#f87171' }}>{videoPct}%</span>
-                  </div>
-                )}
-                {reachPct !== null && (
-                  <div className={styles.planRow}>
-                    <div className={styles.planRowTop}>
-                      <span className={styles.planLabel}>👁 Охваты</span>
-                      <span className={styles.planVals}>{fmtNum(allViews)} / {fmtNum(totalReachPlan)}</span>
-                    </div>
-                    <ProgressBar pct={reachPct} />
-                    <span className={styles.planPct} style={{ color: reachPct >= 70 ? '#4ade80' : reachPct >= 40 ? '#ff6a00' : '#f87171' }}>{reachPct}%</span>
-                  </div>
-                )}
-                {byCreator.filter(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0).map(c => {
-                  const mp = c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0);
-                  const pct = Math.min(Math.round((c.total_videos||0) / mp * 100), 100);
-                  return (
-                    <div key={c.creator_id} className={styles.planCreatorRow}>
-                      <div className={styles.planCreatorTop}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text2)', fontWeight: 500 }}>
-                          <Avatar name={c.creator_name} color={c.avatar_color} size={20} /> {c.creator_name}
-                        </span>
-                        <span style={{ fontSize: 11, color: 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>{c.total_videos||0}/{mp}</span>
-                      </div>
-                      <ProgressBar pct={pct} />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
+
+          {/* ── Три плитки: Ролики | Охваты | По креаторам ───────── */}
+          {(videoPct !== null || reachPct !== null || creatorsWithPlan.length > 0) && (
+            <div className={styles.planGrid}>
+
+              {/* Плитка 1: ролики */}
+              {videoPct !== null && (
+                <div className={styles.planTile}>
+                  <div className={styles.planTileLabel}>🎬 Ролики</div>
+                  <div className={styles.planTileCenter}>
+                    <div className={styles.planCircleWrap}>
+                      <CircularProgress pct={videoPct} size={96} stroke={7} />
+                      <div className={styles.planCircleInner}>
+                        <span className={styles.planCirclePct}
+                          style={{ color: videoPct >= 70 ? '#4ade80' : videoPct >= 40 ? '#ff6a00' : '#f87171' }}>
+                          {videoPct}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className={styles.planTileStats}>
+                      <span className={styles.planTileFact}>{totalVideos}</span>
+                      <span className={styles.planTileSep}>/</span>
+                      <span className={styles.planTilePlan}>{totalVideoPlan}</span>
+                    </div>
+                    <span className={styles.planTileSub}>факт / план</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Плитка 2: охваты */}
+              {reachPct !== null && (
+                <div className={styles.planTile}>
+                  <div className={styles.planTileLabel}>👁 Охваты</div>
+                  <div className={styles.planTileCenter}>
+                    <div className={styles.planCircleWrap}>
+                      <CircularProgress pct={reachPct} size={96} stroke={7} />
+                      <div className={styles.planCircleInner}>
+                        <span className={styles.planCirclePct}
+                          style={{ color: reachPct >= 70 ? '#4ade80' : reachPct >= 40 ? '#ff6a00' : '#f87171' }}>
+                          {reachPct}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className={styles.planTileStats}>
+                      <span className={styles.planTileFact}>{fmtNum(allViews)}</span>
+                      <span className={styles.planTileSep}>/</span>
+                      <span className={styles.planTilePlan}>{fmtNum(totalReachPlan)}</span>
+                    </div>
+                    <span className={styles.planTileSub}>просм. / план</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Плитка 3: по каждому креатору */}
+              {creatorsWithPlan.length > 0 && (
+                <div className={styles.planTile + ' ' + styles.planTileWide}>
+                  <div className={styles.planTileLabel}>Выполнение по креаторам</div>
+                  <div className={styles.planCreatorList}>
+                    {creatorsWithPlan.map(c => {
+                      const mp = c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0);
+                      const pct = Math.min(Math.round((c.total_videos||0) / mp * 100), 100);
+                      const color = pct >= 70 ? '#4ade80' : pct >= 40 ? '#ff6a00' : '#f87171';
+                      return (
+                        <div key={c.creator_id} className={styles.planCreatorItem}
+                          onClick={() => navigate(`/creator/${c.creator_id}`)}>
+                          <div className={styles.planCreatorLeft}>
+                            <Avatar name={c.creator_name} color={c.avatar_color} size={24} />
+                            <span className={styles.planCreatorName}>{c.creator_name}</span>
+                          </div>
+                          <div className={styles.planCreatorRight}>
+                            <span className={styles.planCreatorCount} style={{ color }}>{c.total_videos||0}/{mp}</span>
+                            <div className={styles.planMiniBar}>
+                              <div className={styles.planMiniFill} style={{ width: pct + '%', background: color }} />
+                            </div>
+                            <span className={styles.planCreatorPct} style={{ color }}>{pct}%</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Таблица креаторов ─────────────────────────────────── */}
           <div className={styles.section}>
@@ -286,7 +334,7 @@ export default function Dashboard() {
               ? <Empty text="Нет данных за выбранный период" sub="Добавьте видео на странице «Ролики»" />
               : <CreatorsTable
                   creators={filteredCreators}
-                  prevCreators={prevByCreator}
+                  prevByCreator={prevByCreator}
                   activePlatforms={platforms}
                   hasPrev={hasPrev}
                   onOpen={id => navigate(`/creator/${id}`)}
@@ -316,11 +364,15 @@ function RankingList({ creators, tab, funnelPayouts, onOpen }) {
   return (
     <div className={styles.rankList}>
       {sorted.slice(0, 6).map((c, i) => {
-        const val = tab === 'er' ? parseFloat(c.avg_er || 0) : tab === 'sales' ? (funnelPayouts[c.creator_id] || 0) : (c.total_views || 0);
+        const val = tab === 'er' ? parseFloat(c.avg_er || 0) :
+                    tab === 'sales' ? (funnelPayouts[c.creator_id] || 0) :
+                    (c.total_views || 0);
         const pct = max > 0 ? Math.round(val / max * 100) : 0;
         const mainPlat = c.platforms?.split(',')[0];
         const barColor = platColors[mainPlat] || '#ff6a00';
-        const displayVal = tab === 'er' ? fmtEr(c.avg_er) : tab === 'sales' ? `₽ ${fmtNum(Math.round(val))}` : fmtNum(c.total_views);
+        const displayVal = tab === 'er' ? fmtEr(c.avg_er) :
+                           tab === 'sales' ? `₽ ${fmtNum(Math.round(val))}` :
+                           fmtNum(c.total_views);
         return (
           <div key={c.creator_id} className={styles.rankRow} onClick={() => onOpen(c.creator_id)}>
             <span className={styles.rankPos}>{medals[i] || `#${i+1}`}</span>
@@ -337,9 +389,9 @@ function RankingList({ creators, tab, funnelPayouts, onOpen }) {
   );
 }
 
-function CreatorsTable({ creators, prevCreators, activePlatforms, hasPrev, onOpen }) {
+function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOpen }) {
   const prevMap = {};
-  prevCreators.forEach(c => { prevMap[c.creator_id] = c; });
+  prevByCreator.forEach(c => { prevMap[c.creator_id] = c; });
 
   const hasVideoPlan = creators.some(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0);
   const gridCols = `minmax(140px,1.5fr) 130px${hasVideoPlan ? ' 110px' : ''} minmax(90px,1fr) minmax(80px,1fr) minmax(80px,1fr) 70px 70px`;
@@ -361,8 +413,7 @@ function CreatorsTable({ creators, prevCreators, activePlatforms, hasPrev, onOpe
         const plats = c.platforms ? c.platforms.split(',').filter(p => activePlatforms.has(p)) : [];
         const monthPlan = c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0);
         const videoPct = monthPlan > 0 ? Math.min(Math.round((c.total_videos||0) / monthPlan * 100), 100) : null;
-
-        const d = (curr, p) => hasPrev && prev ? calcDelta(curr, p) : null;
+        const dv = (curr, p) => hasPrev && prev ? calcDelta(curr, p) : null;
 
         return (
           <div key={c.creator_id} className={styles.tableRow} style={{ gridTemplateColumns: gridCols }}>
@@ -376,25 +427,22 @@ function CreatorsTable({ creators, prevCreators, activePlatforms, hasPrev, onOpe
             </div>
             {hasVideoPlan && (
               <span className={styles.mono}>
-                {monthPlan > 0 ? (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span>{c.total_videos||0}/{monthPlan}</span>
-                    <span style={{ fontSize: 10, color: videoPct >= 70 ? '#4ade80' : videoPct >= 40 ? '#ff6a00' : '#f87171', fontWeight: 700 }}>{videoPct}%</span>
-                  </span>
-                ) : <span style={{ color: 'var(--text3)' }}>—</span>}
+                {monthPlan > 0
+                  ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span>{c.total_videos||0}/{monthPlan}</span>
+                      <span style={{ fontSize: 10, color: videoPct >= 70 ? '#4ade80' : videoPct >= 40 ? '#ff6a00' : '#f87171', fontWeight: 700 }}>{videoPct}%</span>
+                    </span>
+                  : <span style={{ color: 'var(--text3)' }}>—</span>}
               </span>
             )}
             <span className={styles.monoCell}>
-              {fmtNum(c.total_views)}
-              <DeltaInline val={d(c.total_views, prev?.total_views)} />
+              {fmtNum(c.total_views)}<DeltaInline val={dv(c.total_views, prev?.total_views)} />
             </span>
             <span className={styles.monoCell}>
-              {fmtNum(c.total_likes)}
-              <DeltaInline val={d(c.total_likes, prev?.total_likes)} />
+              {fmtNum(c.total_likes)}<DeltaInline val={dv(c.total_likes, prev?.total_likes)} />
             </span>
             <span className={styles.monoCell}>
-              {fmtNum(c.total_comments)}
-              <DeltaInline val={d(c.total_comments, prev?.total_comments)} />
+              {fmtNum(c.total_comments)}<DeltaInline val={dv(c.total_comments, prev?.total_comments)} />
             </span>
             <span className={styles.mono}>{c.total_shares ? fmtNum(c.total_shares) : <span style={{ color: 'var(--text3)' }}>—</span>}</span>
             <span className={styles.erVal}>{fmtEr(c.avg_er)}</span>
@@ -407,9 +455,8 @@ function CreatorsTable({ creators, prevCreators, activePlatforms, hasPrev, onOpe
 
 function DeltaInline({ val }) {
   if (val == null) return null;
-  const color = val > 0 ? '#4ade80' : '#f87171';
   return (
-    <span style={{ fontSize: 10, fontWeight: 700, color, marginLeft: 4, whiteSpace: 'nowrap' }}>
+    <span style={{ fontSize: 10, fontWeight: 700, color: val > 0 ? '#4ade80' : '#f87171', marginLeft: 4, whiteSpace: 'nowrap' }}>
       {val > 0 ? '↑' : '↓'}{Math.abs(val).toFixed(1)}%
     </span>
   );
