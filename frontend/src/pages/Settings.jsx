@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Pencil } from 'lucide-react';
 import { useAuth } from '../App.jsx';
 import { api } from '../lib/api.js';
 import { PageHeader, Avatar, Btn, Input, Modal, Loader } from '../components/UI.jsx';
@@ -202,8 +203,8 @@ export default function Settings() {
                   <button
                     onClick={() => { setEditingName(true); setNewName(user?.name || ''); }}
                     title="Изменить имя"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13, padding: '1px 4px', borderRadius: 4, lineHeight: 1 }}
-                  >✏️</button>
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: '2px', borderRadius: 4, display: 'flex', alignItems: 'center', lineHeight: 1 }}
+                  ><Pencil size={14} strokeWidth={1.5} /></button>
                 </div>
               )}
               <div className={styles.profileEmail}>{user?.email}</div>
