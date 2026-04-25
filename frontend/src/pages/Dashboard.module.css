@@ -24,6 +24,16 @@
 .platBtn:hover { border-color: var(--border2); color: var(--text2); }
 .platActive { font-weight: 600; }
 
+/* ── Compare label ──────────────────────────────────────────────────────── */
+.compareLabel {
+  padding: 0 28px 8px;
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+@media (max-width: 768px) { .compareLabel { padding: 0 16px 8px; } }
+
 /* ── Metrics ────────────────────────────────────────────────────────────── */
 .metrics {
   display: grid;

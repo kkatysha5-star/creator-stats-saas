@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
-import { fmtNum, fmtEr, platformMeta, periodToDates, periodToPrevDates, calcDelta } from '../lib/utils.js';
+import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta } from '../lib/utils.js';
 import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Loader, Empty, ProgressBar, CircularProgress } from '../components/UI.jsx';
 import { useAuth } from '../App.jsx';
 import styles from './Dashboard.module.css';
@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [byCreator, setByCreator] = useState([]);
   const [prevByCreator, setPrevByCreator] = useState([]);
   const [funnelPayouts, setFunnelPayouts] = useState({});
+  const [compareWith, setCompareWith] = useState('prev_period');
   const [loading, setLoading] = useState(true);
   const [activeMetric, setActiveMetric] = useState(null);
   const [rankTab, setRankTab] = useState('views');
@@ -30,7 +31,7 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const dates = periodToDates(period, customFrom, customTo);
-      const prevDates = periodToPrevDates(period);
+      const prevDates = getCompareDates(compareWith, period, customFrom, customTo);
 
       const requests = [
         api.getSummary({ ...dates, platform: 'youtube' }),
@@ -78,7 +79,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [period, customFrom, customTo, isPro]);
+  }, [period, customFrom, customTo, compareWith, isPro]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -145,6 +146,7 @@ export default function Dashboard() {
       <div className={styles.toolbar}>
         <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo}
           onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t); }} />
+        <CompareSelect value={compareWith} onChange={setCompareWith} />
         <div className={styles.platFilters}>
           {['youtube', 'tiktok', 'instagram'].map(p => {
             const { label, color } = platformMeta(p);
@@ -166,6 +168,11 @@ export default function Dashboard() {
         <div className="fade-in">
 
           {/* ── Метрики ──────────────────────────────────────────── */}
+          {hasPrev && (
+            <div className={styles.compareLabel}>
+              ↔ сравнение: {COMPARE_LABELS[compareWith]}
+            </div>
+          )}
           <div className={styles.metrics}>
             {metrics.map(m => (
               <MetricCard key={m.id} label={m.label} value={m.fmt} rawValue={m.raw}
@@ -343,6 +350,48 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+const COMPARE_OPTIONS = [
+  { value: 'prev_period', label: 'Прошлый период' },
+  { value: 'prev_week',   label: 'Прошлая неделя' },
+  { value: 'prev_month',  label: 'Прошлый месяц'  },
+  { value: 'off',         label: 'Без сравнения'  },
+];
+const COMPARE_LABELS = Object.fromEntries(COMPARE_OPTIONS.map(o => [o.value, o.label]));
+
+function CompareSelect({ value, onChange }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, letterSpacing: '0.4px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>vs</span>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          background: 'var(--bg3)',
+          border: '1px solid var(--border2)',
+          borderRadius: 'var(--radius-pill)',
+          color: value === 'off' ? 'var(--text3)' : 'var(--text2)',
+          fontFamily: 'var(--font)',
+          fontSize: '12.5px',
+          fontWeight: 500,
+          padding: '5px 12px',
+          outline: 'none',
+          cursor: 'pointer',
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          paddingRight: 28,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right 10px center',
+        }}
+      >
+        {COMPARE_OPTIONS.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
     </div>
   );
 }

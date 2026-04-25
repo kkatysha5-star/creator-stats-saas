@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
-import { fmtNum, fmtEr, platformMeta, periodToDates, periodToPrevDates, calcDelta } from '../lib/utils.js';
+import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta } from '../lib/utils.js';
 import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Btn, Input, Select, Modal, Loader, Empty, PlatformBadge } from '../components/UI.jsx';
 import styles from './CreatorDashboard.module.css';
 
@@ -10,6 +10,7 @@ export default function CreatorDashboard() {
   const navigate = useNavigate();
 
   const [period, setPeriod] = useState('month');
+  const [compareWith, setCompareWith] = useState('prev_period');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [creator, setCreator] = useState(null);
@@ -23,7 +24,7 @@ export default function CreatorDashboard() {
     setLoading(true);
     try {
       const dates = periodToDates(period, customFrom, customTo);
-      const prevDates = periodToPrevDates(period);
+      const prevDates = getCompareDates(compareWith, period, customFrom, customTo);
       const requests = [
         api.getCreators(),
         api.getSummary({ ...dates, platform: 'youtube',   creator_id: id }),
@@ -55,13 +56,13 @@ export default function CreatorDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [id, period, customFrom, customTo]);
+  }, [id, period, customFrom, customTo, compareWith]);
 
   useEffect(() => { load(); }, [load]);
 
   const sum = (key) => ['youtube','tiktok','instagram'].reduce((s, p) => s + (summaryByPlat[p]?.[key] || 0), 0);
   const prevSum = (key) => ['youtube','tiktok','instagram'].reduce((s, p) => s + (prevSummaryByPlat[p]?.[key] || 0), 0);
-  const hasPrev = Object.keys(prevSummaryByPlat).length > 0;
+  const hasPrev = ['youtube','tiktok','instagram'].some(p => (Number(prevSummaryByPlat[p]?.total_views) || 0) > 0);
 
   const allViews     = sum('total_views');
   const totalLikes   = sum('total_likes');
@@ -132,6 +133,7 @@ export default function CreatorDashboard() {
 
       <div className={styles.toolbar}>
         <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t); }} />
+        <CompareSelect value={compareWith} onChange={setCompareWith} />
       </div>
 
       {loading ? <Loader /> : (
@@ -327,6 +329,38 @@ function AddVideoModal({ creatorId, creatorName, onClose, onSaved }) {
         <Btn variant="primary" onClick={handleSave} loading={loading}>Добавить</Btn>
       </div>
     </Modal>
+  );
+}
+
+const COMPARE_OPTIONS_CD = [
+  { value: 'prev_period', label: 'Прошлый период' },
+  { value: 'prev_week',   label: 'Прошлая неделя' },
+  { value: 'prev_month',  label: 'Прошлый месяц'  },
+  { value: 'off',         label: 'Без сравнения'  },
+];
+
+function CompareSelect({ value, onChange }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, letterSpacing: '0.4px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>vs</span>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          background: 'var(--bg3)', border: '1px solid var(--border2)',
+          borderRadius: 'var(--radius-pill)', color: value === 'off' ? 'var(--text3)' : 'var(--text2)',
+          fontFamily: 'var(--font)', fontSize: '12.5px', fontWeight: 500,
+          padding: '5px 28px 5px 12px', outline: 'none', cursor: 'pointer',
+          appearance: 'none', WebkitAppearance: 'none',
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center',
+        }}
+      >
+        {COMPARE_OPTIONS_CD.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </div>
   );
 }
 

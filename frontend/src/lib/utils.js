@@ -20,6 +20,8 @@ export function getInitials(name) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
 
+function isoDate(d) { return d.toISOString().split('T')[0]; }
+
 // Возвращает даты предыдущего аналогичного периода для сравнения
 export function periodToPrevDates(period) {
   const now = new Date();
@@ -27,17 +29,49 @@ export function periodToPrevDates(period) {
   const m = now.getMonth();
 
   if (period === 'month') {
-    return { from: new Date(y, m - 1, 1).toISOString().split('T')[0], to: new Date(y, m, 0).toISOString().split('T')[0] };
+    return { from: isoDate(new Date(y, m - 1, 1)), to: isoDate(new Date(y, m, 0)) };
   }
   if (period === 'lastmonth') {
-    return { from: new Date(y, m - 2, 1).toISOString().split('T')[0], to: new Date(y, m - 1, 0).toISOString().split('T')[0] };
+    return { from: isoDate(new Date(y, m - 2, 1)), to: isoDate(new Date(y, m - 1, 0)) };
   }
   if (period === 'quarter') {
     const q = Math.floor(m / 3);
     const pq = q - 1 < 0 ? 3 : q - 1;
     const py = q - 1 < 0 ? y - 1 : y;
-    return { from: new Date(py, pq * 3, 1).toISOString().split('T')[0], to: new Date(py, pq * 3 + 3, 0).toISOString().split('T')[0] };
+    return { from: isoDate(new Date(py, pq * 3, 1)), to: isoDate(new Date(py, pq * 3 + 3, 0)) };
   }
+  return null;
+}
+
+// compareMode: 'off' | 'prev_week' | 'prev_month' | 'prev_period'
+// Возвращает диапазон дат для сравнения относительно начала текущего периода
+export function getCompareDates(compareMode, period, customFrom, customTo) {
+  if (!compareMode || compareMode === 'off') return null;
+
+  if (compareMode === 'prev_period') {
+    return periodToPrevDates(period);
+  }
+
+  // Для prev_week и prev_month считаем от начала текущего периода
+  const current = periodToDates(period, customFrom, customTo);
+  const startStr = current.from;
+  if (!startStr) return null;
+  const start = new Date(startStr + 'T00:00:00');
+
+  if (compareMode === 'prev_week') {
+    const to = new Date(start);
+    to.setDate(to.getDate() - 1);          // день перед периодом
+    const from = new Date(to);
+    from.setDate(from.getDate() - 6);       // 7 дней назад от этой точки
+    return { from: isoDate(from), to: isoDate(to) };
+  }
+
+  if (compareMode === 'prev_month') {
+    const y = start.getFullYear();
+    const m = start.getMonth();
+    return { from: isoDate(new Date(y, m - 1, 1)), to: isoDate(new Date(y, m, 0)) };
+  }
+
   return null;
 }
 
