@@ -20,6 +20,32 @@ export function getInitials(name) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
 
+// Возвращает даты предыдущего аналогичного периода для сравнения
+export function periodToPrevDates(period) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+
+  if (period === 'month') {
+    return { from: new Date(y, m - 1, 1).toISOString().split('T')[0], to: new Date(y, m, 0).toISOString().split('T')[0] };
+  }
+  if (period === 'lastmonth') {
+    return { from: new Date(y, m - 2, 1).toISOString().split('T')[0], to: new Date(y, m - 1, 0).toISOString().split('T')[0] };
+  }
+  if (period === 'quarter') {
+    const q = Math.floor(m / 3);
+    const pq = q - 1 < 0 ? 3 : q - 1;
+    const py = q - 1 < 0 ? y - 1 : y;
+    return { from: new Date(py, pq * 3, 1).toISOString().split('T')[0], to: new Date(py, pq * 3 + 3, 0).toISOString().split('T')[0] };
+  }
+  return null;
+}
+
+export function calcDelta(curr, prev) {
+  if (curr == null || prev == null || prev === 0) return null;
+  return (curr - prev) / prev * 100;
+}
+
 export function periodToDates(period, customFrom, customTo) {
   const now = new Date();
   const y = now.getFullYear();

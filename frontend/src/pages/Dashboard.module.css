@@ -124,6 +124,29 @@
   border-color: rgba(255,106,0,0.3);
   color: #ff6a00;
 }
+.rankTabLocked { opacity: 0.5; cursor: not-allowed !important; }
+
+.rankLocked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 16px;
+  text-align: center;
+}
+.rankUpgradeBtn {
+  padding: 6px 16px;
+  border-radius: 100px;
+  border: 1px solid rgba(255,106,0,0.4);
+  background: rgba(255,106,0,0.1);
+  color: #ff6a00;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms;
+}
+.rankUpgradeBtn:hover { background: rgba(255,106,0,0.2); }
 
 .rankList { display: flex; flex-direction: column; gap: 10px; }
 
@@ -237,7 +260,14 @@
 }
 .platDots { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
 
+.platVideosCell { display: flex; align-items: center; gap: 8px; }
+.platCount { font-size: 13px; color: var(--text2); font-variant-numeric: tabular-nums; font-weight: 600; }
+
 .mono { font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 500; }
+.monoCell {
+  font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 500;
+  display: flex; align-items: baseline; gap: 0;
+}
 .erVal { font-size: 13px; color: #ff6a00; font-variant-numeric: tabular-nums; font-weight: 700; }
 
 /* ── Mobile ─────────────────────────────────────────────────────────────── */

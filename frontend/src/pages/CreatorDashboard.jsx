@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
-import { fmtNum, fmtEr, platformMeta, periodToDates } from '../lib/utils.js';
+import { fmtNum, fmtEr, platformMeta, periodToDates, periodToPrevDates, calcDelta } from '../lib/utils.js';
 import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Btn, Input, Select, Modal, Loader, Empty, PlatformBadge } from '../components/UI.jsx';
 import styles from './CreatorDashboard.module.css';
 
@@ -14,6 +14,7 @@ export default function CreatorDashboard() {
   const [customTo, setCustomTo] = useState('');
   const [creator, setCreator] = useState(null);
   const [summaryByPlat, setSummaryByPlat] = useState({});
+  const [prevSummaryByPlat, setPrevSummaryByPlat] = useState({});
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,17 +23,33 @@ export default function CreatorDashboard() {
     setLoading(true);
     try {
       const dates = periodToDates(period, customFrom, customTo);
-      const [creators, ytRes, ttRes, igRes, vids] = await Promise.all([
+      const prevDates = periodToPrevDates(period);
+      const requests = [
         api.getCreators(),
-        api.getSummary({ ...dates, platform: 'youtube', creator_id: id }),
-        api.getSummary({ ...dates, platform: 'tiktok', creator_id: id }),
+        api.getSummary({ ...dates, platform: 'youtube',   creator_id: id }),
+        api.getSummary({ ...dates, platform: 'tiktok',    creator_id: id }),
         api.getSummary({ ...dates, platform: 'instagram', creator_id: id }),
         api.getVideos({ ...dates, creator_id: id }),
-      ]);
+      ];
+      if (prevDates) {
+        requests.push(
+          api.getSummary({ ...prevDates, platform: 'youtube',   creator_id: id }),
+          api.getSummary({ ...prevDates, platform: 'tiktok',    creator_id: id }),
+          api.getSummary({ ...prevDates, platform: 'instagram', creator_id: id }),
+        );
+      }
+      const results = await Promise.all(requests);
+      const [creators, ytRes, ttRes, igRes, vids] = results;
       const found = creators.find(c => String(c.id) === String(id));
       setCreator(found || null);
       setSummaryByPlat({ youtube: ytRes, tiktok: ttRes, instagram: igRes });
       setVideos(vids);
+      if (prevDates) {
+        const [,,,, , pYt, pTt, pIg] = results;
+        setPrevSummaryByPlat({ youtube: pYt, tiktok: pTt, instagram: pIg });
+      } else {
+        setPrevSummaryByPlat({});
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -42,13 +59,22 @@ export default function CreatorDashboard() {
 
   useEffect(() => { load(); }, [load]);
 
-  const allViews = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (summaryByPlat[p]?.total_views || 0), 0);
-  const totalLikes = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (summaryByPlat[p]?.total_likes || 0), 0);
-  const totalComments = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (summaryByPlat[p]?.total_comments || 0), 0);
-  const totalSaves = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (summaryByPlat[p]?.total_saves || 0), 0);
-  const totalShares = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (summaryByPlat[p]?.total_shares || 0), 0);
-  const totalVideos = ['youtube', 'tiktok', 'instagram'].reduce((s, p) => s + (summaryByPlat[p]?.total_videos || 0), 0);
-  const avgEr = allViews > 0 ? ((totalLikes + totalComments + totalSaves) / allViews * 100) : 0;
+  const sum = (key) => ['youtube','tiktok','instagram'].reduce((s, p) => s + (summaryByPlat[p]?.[key] || 0), 0);
+  const prevSum = (key) => ['youtube','tiktok','instagram'].reduce((s, p) => s + (prevSummaryByPlat[p]?.[key] || 0), 0);
+  const hasPrev = Object.keys(prevSummaryByPlat).length > 0;
+
+  const allViews     = sum('total_views');
+  const totalLikes   = sum('total_likes');
+  const totalComments= sum('total_comments');
+  const totalShares  = sum('total_shares');
+  const totalVideos  = sum('total_videos');
+  const avgEr = allViews > 0 ? ((totalLikes + totalComments) / allViews * 100) : 0;
+
+  const prevViews    = prevSum('total_views');
+  const prevLikes    = prevSum('total_likes');
+  const prevComments = prevSum('total_comments');
+  const prevShares   = prevSum('total_shares');
+  const prevAvgEr    = prevViews > 0 ? ((prevLikes + prevComments) / prevViews * 100) : 0;
 
   // Планы
   const monthVideoPlan = creator
@@ -113,12 +139,11 @@ export default function CreatorDashboard() {
 
           {/* Метрики */}
           <div className={styles.metrics}>
-            <MetricCard label="Просмотры" value={fmtNum(allViews)} sub={`${totalVideos} роликов`} />
-            <MetricCard label="Лайки" value={fmtNum(totalLikes)} />
-            <MetricCard label="Комментарии" value={fmtNum(totalComments)} />
-            <MetricCard label="Сохранения" value={fmtNum(totalSaves)} />
-            <MetricCard label="Репосты" value={fmtNum(totalShares)} />
-            <MetricCard label="Средний ER" value={fmtEr(avgEr)} />
+            <MetricCard label="Просмотры"   rawValue={allViews}     value={fmtNum(allViews)}      sub={`${totalVideos} роликов`} delta={hasPrev ? calcDelta(allViews, prevViews) : null} />
+            <MetricCard label="Лайки"       rawValue={totalLikes}   value={fmtNum(totalLikes)}     delta={hasPrev ? calcDelta(totalLikes, prevLikes) : null} />
+            <MetricCard label="Комментарии" rawValue={totalComments}value={fmtNum(totalComments)}  delta={hasPrev ? calcDelta(totalComments, prevComments) : null} />
+            <MetricCard label="Репосты"     rawValue={totalShares}  value={fmtNum(totalShares)}    delta={hasPrev ? calcDelta(totalShares, prevShares) : null} />
+            <MetricCard label="Средний ER"  value={fmtEr(avgEr)}                                   delta={hasPrev ? calcDelta(avgEr, prevAvgEr) : null} />
           </div>
 
           {/* Планы */}

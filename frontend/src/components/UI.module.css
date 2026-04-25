@@ -51,6 +51,10 @@
 }
 .metricSub { font-size: 11px; color: var(--text3); margin-top: 6px; font-weight: 400; }
 
+.deltaUp   { font-size: 11px; font-weight: 700; color: #4ade80; margin-top: 5px; letter-spacing: 0.2px; }
+.deltaDown { font-size: 11px; font-weight: 700; color: #f87171; margin-top: 5px; letter-spacing: 0.2px; }
+.deltaFlat { font-size: 11px; font-weight: 600; color: var(--text3); margin-top: 5px; }
+
 /* ─── Platform Badge ─────────────────────────────────────────────────────── */
 .badge {
   display: inline-block;
@@ -289,6 +293,119 @@
 }
 .dateInput:focus { border-color: var(--accent); }
 .dateInput::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+
+/* ─── DatePicker ─────────────────────────────────────────────────────────── */
+.dpWrap { position: relative; display: inline-block; }
+
+.dpTrigger {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 150ms;
+  white-space: nowrap;
+  min-width: 110px;
+}
+.dpTrigger:hover { border-color: var(--accent); }
+.dpValueSet { color: var(--text); }
+.dpPlaceholder { color: var(--text3); }
+.dpClear {
+  margin-left: auto;
+  color: var(--text3);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.dpClear:hover { color: #f87171; }
+
+.dpCalendar {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  background: var(--bg2);
+  border: 1px solid var(--card-border);
+  border-top: 1px solid var(--card-border-top);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  width: 252px;
+  animation: fadeUp 150ms ease-out both;
+}
+[data-theme="light"] .dpCalendar { box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+
+.dpCalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.dpMonthLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.dpNavBtn {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 150ms;
+  line-height: 1;
+}
+.dpNavBtn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
+
+.dpGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.dpDayName {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  text-align: center;
+  padding: 3px 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.dpDay {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 120ms;
+  display: flex; align-items: center; justify-content: center;
+}
+.dpDay:hover { background: var(--bg4); color: var(--text); }
+.dpDayToday {
+  color: #ff6a00;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(255,106,0,0.35);
+}
+.dpDaySelected {
+  background: #ff6a00 !important;
+  color: #fff !important;
+  font-weight: 700;
+}
 
 /* ─── Mobile ─────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
