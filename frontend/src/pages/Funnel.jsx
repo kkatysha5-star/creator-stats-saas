@@ -2,9 +2,45 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../lib/api.js';
 import { fmtNum } from '../lib/utils.js';
 import { PageHeader, Avatar, Btn, Input, Select, Modal, Loader, Empty } from '../components/UI.jsx';
+import { useAuth } from '../App.jsx';
 import styles from './Funnel.module.css';
 
 const ADMIN_KEY = 'funnel_admin_unlocked';
+
+const PLAN_HAS_FUNNEL = { pro: true };
+
+function FunnelUpgradeWall() {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      padding: '80px 24px', gap: 16, textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 48, lineHeight: 1 }}>📊</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: -0.4 }}>
+        Воронка продаж — тариф Pro
+      </div>
+      <div style={{ fontSize: 14, color: 'var(--text3)', maxWidth: 380, lineHeight: 1.6 }}>
+        Отслеживайте конверсии от охвата до заказа, сравнивайте периоды и считайте CAC.
+        Доступно на тарифе <strong style={{ color: '#ff6a00' }}>Pro</strong> за 3 990 ₽/мес.
+      </div>
+      <div style={{
+        marginTop: 8, background: 'var(--card-bg)',
+        border: '1px solid var(--card-border)', borderTop: '1px solid var(--card-border-top)',
+        borderRadius: 'var(--radius)', padding: '20px 28px',
+        display: 'flex', flexDirection: 'column', gap: 8, minWidth: 280,
+      }}>
+        {['Охват → Заходы → Корзина → Заказы', 'Сравнение периодов', 'CAC и CPM по каждому креатору', 'До 20 креаторов'].map(f => (
+          <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text2)' }}>
+            <span style={{ color: '#4ade80', fontWeight: 700 }}>✓</span> {f}
+          </div>
+        ))}
+      </div>
+      <Btn variant="primary" onClick={() => window.location.href = '/settings'}>
+        Перейти на Pro →
+      </Btn>
+    </div>
+  );
+}
 
 function fmt(n) {
   if (n == null || isNaN(n)) return '—';
@@ -20,6 +56,23 @@ function delta(curr, prev) {
 }
 
 export default function Funnel() {
+  const { auth } = useAuth();
+  const workspace = auth?.workspaces?.[0];
+  const hasFunnel = PLAN_HAS_FUNNEL[workspace?.plan] ?? false;
+
+  if (!hasFunnel) {
+    return (
+      <div className={styles.page}>
+        <PageHeader title="Воронка продаж" subtitle="Конверсии и продажи по периодам" />
+        <FunnelUpgradeWall />
+      </div>
+    );
+  }
+
+  return <FunnelInner />;
+}
+
+function FunnelInner() {
   const [periods, setPeriods] = useState([]);
   const [privateData, setPrivateData] = useState({});
   const [creators, setCreators] = useState([]);
