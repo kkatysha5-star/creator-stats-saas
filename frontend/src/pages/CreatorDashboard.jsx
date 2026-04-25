@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
-import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta, planColor } from '../lib/utils.js';
+import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta, planColor, pluralVideos, reachScheduleStatus } from '../lib/utils.js';
 import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Btn, Input, Select, Modal, Loader, Empty, PlatformBadge, CompareSelector } from '../components/UI.jsx';
 import styles from './CreatorDashboard.module.css';
 
@@ -156,7 +156,6 @@ export default function CreatorDashboard() {
 
           {/* Планы */}
           {(videoPct !== null || reachPct !== null) && (() => {
-            // статус в графике / отстаёт
             const rate = Number(creator?.daily_rate);
             const pStart = creator?.period_start;
             let sched = null;
@@ -170,7 +169,7 @@ export default function CreatorDashboard() {
                 sched = { delta, ok: delta >= 0 };
               }
             }
-            const pctColor = planColor;
+            const rSched = reachScheduleStatus(creator?.period_start, creator?.reach_plan, allViews);
             return (
               <div style={{ padding: '0 28px 20px', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {videoPct !== null && (
@@ -180,13 +179,15 @@ export default function CreatorDashboard() {
                       {totalUniqueVideos}<span style={{ fontSize: 16, color: 'var(--text3)', fontWeight: 400 }}> / {monthVideoPlan}</span>
                     </div>
                     <div style={{ height: 5, background: 'rgba(255,255,255,0.05)', borderRadius: 10, overflow: 'hidden', margin: '8px 0 6px' }}>
-                      <div style={{ height: '100%', width: videoPct + '%', background: pctColor(videoPct), borderRadius: 10, transition: 'width .5s' }} />
+                      <div style={{ height: '100%', width: videoPct + '%', background: planColor(videoPct), borderRadius: 10, transition: 'width .5s' }} />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: pctColor(videoPct) }}>{videoPct}% выполнения</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: planColor(videoPct) }}>{videoPct}% выполнения</span>
                       {sched && (
                         <span style={{ fontSize: 12, fontWeight: 700, color: sched.ok ? '#4ade80' : '#f87171' }}>
-                          {sched.ok ? `✓ в графике${sched.delta > 0 ? ` (+${sched.delta})` : ''}` : `↓ −${Math.abs(sched.delta)} ролика`}
+                          {sched.ok
+                            ? `✓ в графике${sched.delta > 0 ? ` (+${sched.delta})` : ''}`
+                            : `↓ отстаёт на ${Math.abs(sched.delta)} ${pluralVideos(sched.delta)}`}
                         </span>
                       )}
                     </div>
@@ -199,9 +200,18 @@ export default function CreatorDashboard() {
                       {fmtNum(allViews)}<span style={{ fontSize: 16, color: 'var(--text3)', fontWeight: 400 }}> / {fmtNum(creator.reach_plan)}</span>
                     </div>
                     <div style={{ height: 5, background: 'rgba(255,255,255,0.05)', borderRadius: 10, overflow: 'hidden', margin: '8px 0 6px' }}>
-                      <div style={{ height: '100%', width: reachPct + '%', background: pctColor(reachPct), borderRadius: 10, transition: 'width .5s' }} />
+                      <div style={{ height: '100%', width: reachPct + '%', background: planColor(reachPct), borderRadius: 10, transition: 'width .5s' }} />
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: pctColor(reachPct) }}>{reachPct}% выполнения</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: planColor(reachPct) }}>{reachPct}% выполнения</span>
+                      {rSched && (
+                        <span style={{ fontSize: 12, fontWeight: 700, color: rSched.ok ? '#4ade80' : '#f87171' }}>
+                          {rSched.ok
+                            ? '✓ в графике'
+                            : `↓ отстаёт на ${fmtNum(Math.abs(rSched.delta))}`}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

@@ -275,7 +275,8 @@
 .planTileFact { font-size: 20px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
 .planTileSep  { font-size: 14px; color: var(--text3); }
 .planTilePlan { font-size: 14px; color: var(--text3); font-variant-numeric: tabular-nums; font-weight: 500; }
-.planTileSub  { font-size: 11px; color: var(--text3); font-weight: 500; }
+.planTileSub    { font-size: 11px; color: var(--text3); font-weight: 500; }
+.planTileStatus { font-size: 12px; font-weight: 700; letter-spacing: 0.1px; }
 
 /* Плитка 3: по креаторам */
 .planCreatorList {

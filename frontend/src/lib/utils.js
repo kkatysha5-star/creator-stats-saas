@@ -85,6 +85,29 @@ export function calcDelta(curr, prev) {
   return (curr - prev) / prev * 100;
 }
 
+// Склонение числительных
+export function pluralVideos(n) {
+  const abs = Math.abs(n);
+  if (abs % 100 >= 11 && abs % 100 <= 19) return 'роликов';
+  const r = abs % 10;
+  if (r === 1) return 'ролик';
+  if (r >= 2 && r <= 4) return 'ролика';
+  return 'роликов';
+}
+
+// Статус "в графике / отстаёт" по охватам (reach_plan — месячный план)
+export function reachScheduleStatus(periodStart, reachPlan, totalViews) {
+  if (!periodStart || !reachPlan || reachPlan === 0) return null;
+  const start = new Date(periodStart + 'T00:00:00');
+  const today = new Date();
+  if (today < start) return null;
+  const days = Math.floor((today - start) / 86400000);
+  const expected = Math.round(Number(reachPlan) * days / 30);
+  const actual = Number(totalViews) || 0;
+  const delta = actual - expected;
+  return { delta, ok: delta >= 0 };
+}
+
 // Цвет выполнения плана — НЕ красный/оранжевый (они зарезервированы для падений)
 export function planColor(pct) {
   if (pct >= 70) return '#4ade80';  // зелёный — хорошо

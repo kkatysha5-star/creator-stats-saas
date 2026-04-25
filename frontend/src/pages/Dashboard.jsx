@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
-import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta, planColor } from '../lib/utils.js';
+import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta, planColor, pluralVideos, reachScheduleStatus } from '../lib/utils.js';
 import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Loader, Empty, ProgressBar, CircularProgress, CompareSelector } from '../components/UI.jsx';
 import { useAuth } from '../App.jsx';
 import styles from './Dashboard.module.css';
@@ -124,6 +124,17 @@ export default function Dashboard() {
 
   const filteredCreators = byCreator.filter(c => c.platforms?.split(',').some(p => platforms.has(p)));
   const creatorsWithPlan = byCreator.filter(c => (c.video_plan_period === 'week' ? (c.video_plan_count||0)*4 : (c.video_plan_count||0)) > 0);
+
+  // Агрегированный статус для плиток
+  const videoSchedList = creatorsWithPlan.map(scheduleStatus).filter(Boolean);
+  const videoTileStatus = videoSchedList.length > 0 ? {
+    ok: videoSchedList.every(s => s.ok),
+    behind: videoSchedList.filter(s => !s.ok).length,
+  } : null;
+
+  const creatorsWithReach = byCreator.filter(c => (c.reach_plan || 0) > 0);
+  const reachSchedList = creatorsWithReach.map(c => reachScheduleStatus(c.period_start, c.reach_plan, c.total_views)).filter(Boolean);
+  const reachTileStatus = reachSchedList.length > 0 ? { ok: reachSchedList.every(s => s.ok) } : null;
 
   const d = (curr, prev) => hasPrev ? calcDelta(curr, prev) : null;
 
@@ -279,6 +290,11 @@ export default function Dashboard() {
                       <span className={styles.planTilePlan}>{totalVideoPlan}</span>
                     </div>
                     <span className={styles.planTileSub}>факт / план</span>
+                    {videoTileStatus && (
+                      <span className={styles.planTileStatus} style={{ color: videoTileStatus.ok ? '#4ade80' : '#f87171' }}>
+                        {videoTileStatus.ok ? '✓ в графике' : `↓ ${videoTileStatus.behind} ${videoTileStatus.behind === 1 ? 'отстаёт' : 'отстают'}`}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -302,6 +318,11 @@ export default function Dashboard() {
                       <span className={styles.planTilePlan}>{fmtNum(totalReachPlan)}</span>
                     </div>
                     <span className={styles.planTileSub}>просм. / план</span>
+                    {reachTileStatus && (
+                      <span className={styles.planTileStatus} style={{ color: reachTileStatus.ok ? '#4ade80' : '#f87171' }}>
+                        {reachTileStatus.ok ? '✓ в графике' : '↓ отстаёт'}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -463,6 +484,7 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
         const videoPct = mp > 0 ? Math.min(Math.round((c.total_videos||0) / mp * 100), 100) : null;
         const reachPct = c.reach_plan > 0 ? Math.min(Math.round((c.total_views||0) / c.reach_plan * 100), 100) : null;
         const sched = scheduleStatus(c);
+        const rSched = reachScheduleStatus(c.period_start, c.reach_plan, c.total_views);
         const vColor = videoPct != null ? planColor(videoPct) : 'var(--text3)';
         const rColor = reachPct != null ? planColor(reachPct) : 'var(--text3)';
         const dv = (curr, p) => hasPrev && prev ? calcDelta(curr, p) : null;
@@ -487,7 +509,9 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
                     </span>
                     {sched && (
                       <span className={styles.planCellStatus} style={{ color: sched.ok ? '#4ade80' : '#f87171' }}>
-                        {sched.ok ? `✓ в графике${sched.delta > 0 ? ` (+${sched.delta})` : ''}` : `↓ −${Math.abs(sched.delta)} ролика`}
+                        {sched.ok
+                          ? `✓ в графике${sched.delta > 0 ? ` (+${sched.delta})` : ''}`
+                          : `↓ отстаёт на ${Math.abs(sched.delta)} ${pluralVideos(sched.delta)}`}
                       </span>
                     )}
                   </>
@@ -502,6 +526,11 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
                       {fmtNum(c.total_views||0)}<span className={styles.planCellSep}>/</span>{fmtNum(c.reach_plan)}
                     </span>
                     <span className={styles.planCellPct} style={{ color: rColor }}>{reachPct}%</span>
+                    {rSched && (
+                      <span className={styles.planCellStatus} style={{ color: rSched.ok ? '#4ade80' : '#f87171' }}>
+                        {rSched.ok ? '✓ в графике' : `↓ отстаёт на ${fmtNum(Math.abs(rSched.delta))}`}
+                      </span>
+                    )}
                   </>
                 ) : <span style={{ color: 'var(--text3)' }}>—</span>}
               </div>
