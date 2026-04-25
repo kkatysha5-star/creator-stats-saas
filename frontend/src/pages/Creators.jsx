@@ -2,17 +2,82 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 import { fmtNum } from '../lib/utils.js';
 import { PageHeader, Avatar, Btn, Input, Modal, Loader, Empty } from '../components/UI.jsx';
+import { useAuth } from '../App.jsx';
 import styles from './Creators.module.css';
 
 const COLORS = ['#7c6cfc','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#f97316'];
 
+const PLAN_LIMITS = { trial: 1, start: 5, pro: 20, free: 1 };
+const PLAN_LABELS = { trial: 'Пробный', start: 'Start', pro: 'Pro', free: 'Free' };
+
+function CreatorLimitModal({ plan, limit, onClose }) {
+  const isPro = plan === 'pro';
+  return (
+    <Modal title="Лимит креаторов достигнут" onClose={onClose} width={420}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '8px 0 4px', textAlign: 'center' }}>
+        <div style={{ fontSize: 44, lineHeight: 1 }}>👥</div>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+            {isPro ? `Достигнут лимит Pro — ${limit} креаторов` : `Лимит тарифа ${PLAN_LABELS[plan] || plan}: ${limit} ${limit === 1 ? 'креатор' : 'креатора'}`}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.6 }}>
+            {isPro
+              ? 'Нужно больше 20 креаторов? Обсудим индивидуальные условия.'
+              : 'Перейдите на более высокий тариф чтобы добавить больше креаторов.'}
+          </div>
+        </div>
+
+        {!isPro && (
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { key: 'start', label: 'Start', limit: 5,  price: '1 990 ₽/мес', current: plan === 'start' },
+              { key: 'pro',   label: 'Pro',   limit: 20, price: '3 990 ₽/мес', current: false },
+            ].filter(p => PLAN_LIMITS[p.key] > limit).map(p => (
+              <div key={p.key} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: 'var(--bg3)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)', padding: '11px 14px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{p.label}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text3)' }}>до {p.limit} креаторов</span>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#ff6a00' }}>{p.price}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+        <Btn onClick={onClose}>Закрыть</Btn>
+        <Btn variant="primary" onClick={() => { window.location.href = '/settings'; }}>
+          {isPro ? 'Написать нам' : 'Выбрать тариф →'}
+        </Btn>
+      </div>
+    </Modal>
+  );
+}
+
 export default function Creators() {
+  const { auth } = useAuth();
+  const workspace = auth?.workspaces?.[0];
+  const plan = workspace?.plan || 'trial';
+  const limit = PLAN_LIMITS[plan] ?? 1;
+
   const [creators, setCreators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [showLimit, setShowLimit] = useState(false);
   const [editing, setEditing] = useState(null);
   const [inviting, setInviting] = useState(null);
   const [inviteUrl, setInviteUrl] = useState('');
+
+  const atLimit = creators.length >= limit;
+
+  const handleAddClick = () => {
+    if (atLimit) setShowLimit(true);
+    else setShowAdd(true);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -42,8 +107,26 @@ export default function Creators() {
 
   return (
     <div className={styles.page}>
-      <PageHeader title="Креаторы" subtitle="Управление списком креаторов">
-        <Btn variant="primary" onClick={() => setShowAdd(true)}>+ Добавить</Btn>
+      <PageHeader
+        title="Креаторы"
+        subtitle={
+          <span>
+            Управление командой
+            {!loading && (
+              <span style={{
+                marginLeft: 8, fontSize: 11, fontWeight: 700,
+                color: atLimit ? '#f87171' : 'var(--text3)',
+                background: atLimit ? 'rgba(248,113,113,0.1)' : 'var(--bg4)',
+                border: `1px solid ${atLimit ? 'rgba(248,113,113,0.25)' : 'var(--border)'}`,
+                borderRadius: 100, padding: '2px 9px',
+              }}>
+                {creators.length} / {limit}
+              </span>
+            )}
+          </span>
+        }
+      >
+        <Btn variant="primary" onClick={handleAddClick}>+ Добавить</Btn>
       </PageHeader>
 
       {loading ? <Loader /> : creators.length === 0
@@ -102,6 +185,9 @@ export default function Creators() {
           onClose={() => setShowAdd(false)}
           onSaved={() => { setShowAdd(false); load(); }}
         />
+      )}
+      {showLimit && (
+        <CreatorLimitModal plan={plan} limit={limit} onClose={() => setShowLimit(false)} />
       )}
       {editing && (
         <CreatorModal title="Редактировать" initial={editing} colors={COLORS}
