@@ -171,7 +171,7 @@ function PostCard({ post, num, expanded, onToggle, onDelete, onAddVideo, onDelet
           </button>
           <button className={styles.iconBtn} onClick={onAddVideo} title="Добавить платформу">+</button>
           <button className={styles.iconBtn + ' ' + styles.del} onClick={onDelete} title="Удалить">✕</button>
-          <span className={styles.chevron} style={{ transform: expanded ? 'rotate(180deg)' : '' }}>▾</span>
+          <button className={styles.chevron} style={{ transform: expanded ? 'rotate(180deg)' : '' }} onClick={onToggle} title="Развернуть">▾</button>
         </div>
       </div>
 

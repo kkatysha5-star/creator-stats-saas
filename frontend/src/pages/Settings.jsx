@@ -114,7 +114,8 @@ export default function Settings() {
     <div className={styles.page}>
       <PageHeader title="Настройки" subtitle="Управление профилем и командой" />
 
-      <div className={styles.sections}>
+      <div className={styles.layout}>
+      <div className={styles.leftCol}>
 
         {/* Незавершённая настройка */}
         {setupStep !== 'done' && (
@@ -232,7 +233,10 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Команда */}
+      </div>{/* /leftCol */}
+
+      {/* Правая колонка — Команда */}
+      <div className={styles.rightCol}>
         {isOwner && workspace && (
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Команда</h2>
@@ -317,7 +321,9 @@ export default function Settings() {
             )}
           </div>
         )}
-      </div>
+      </div>{/* /rightCol */}
+
+      </div>{/* /layout */}
     </div>
   );
 }

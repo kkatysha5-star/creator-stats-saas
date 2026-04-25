@@ -1,11 +1,40 @@
 .page { padding: 0 0 56px; }
 
+/* Двухколоночный layout на десктопе */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 16px 24px;
+  padding: 0 28px;
+  align-items: start;
+}
+
+.leftCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Устаревший класс — оставляем для совместимости */
 .sections {
   padding: 0 28px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   max-width: 580px;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    padding: 0 16px;
+  }
 }
 
 .section {
