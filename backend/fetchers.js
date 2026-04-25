@@ -113,6 +113,11 @@ export async function fetchTiktokStats(videoId, originalUrl) {
 const instagramCache = new Map();
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 часов
 
+export function clearInstagramCache() {
+  instagramCache.clear();
+  console.log('[instagram] Cache cleared');
+}
+
 export function extractInstagramId(url) {
   const m = url.match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
   return m ? m[1] : null;
@@ -151,12 +156,28 @@ export async function fetchInstagramStats(shortcode, originalUrl) {
   if (!items?.length) throw new Error('Instagram post not found via Apify');
 
   const post = items[0];
+
+  // Временный лог для диагностики — видно все числовые поля Apify
+  console.log('[instagram] Apify raw view fields for', shortcode || originalUrl, {
+    playCount:        post.playCount,
+    videoPlayCount:   post.videoPlayCount,
+    videoViewCount:   post.videoViewCount,
+    likesCount:       post.likesCount,
+    commentsCount:    post.commentsCount,
+    type:             post.type,
+    url:              post.url,
+  });
+
+  // playCount — то что Instagram показывает в интерфейсе (все воспроизведения)
+  // videoViewCount — уникальные зрители (меньшее число, ≠ тому что видит пользователь)
+  const views = parseInt(post.playCount ?? post.videoPlayCount ?? post.videoViewCount ?? 0);
+
   const data = {
     title: (post.caption || post.alt || 'Instagram video').substring(0, 100),
     published_at: post.timestamp
       ? new Date(post.timestamp).toISOString().split('T')[0]
       : null,
-    views: parseInt(post.videoViewCount || post.videoPlayCount || 0),
+    views,
     likes: parseInt(post.likesCount || 0),
     comments: parseInt(post.commentsCount || 0),
     saves: null,

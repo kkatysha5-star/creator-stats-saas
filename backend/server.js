@@ -22,6 +22,7 @@ import statsRouter from './routes/stats.js';
 import postsRouter from './routes/posts.js';
 import funnelRouter from './routes/funnel.js';
 import { setupCron } from './cron.js';
+import { clearInstagramCache } from './fetchers.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -110,6 +111,13 @@ app.use(attachWorkspace);
 initDB().then(() => {
   app.use('/api/auth', authRouter);
   app.use('/api/workspaces', workspacesRouter);
+
+  // Сброс Instagram-кэша для тестирования (только после авторизации)
+  app.post('/api/debug/clear-instagram-cache', (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    clearInstagramCache();
+    res.json({ ok: true, message: 'Instagram cache cleared' });
+  });
 
   app.use('/api/creators', creatorsRouter);
   app.use('/api/videos', videosRouter);
