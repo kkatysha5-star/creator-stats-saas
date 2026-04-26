@@ -4,6 +4,62 @@ import { fetchStatsForVideo } from './fetchers.js';
 import { isPlanActive } from './middleware/auth.js';
 import { trackPlatformError, clearPlatformErrors } from './telegram.js';
 
+// ─── Video list cache (1 hour) ────────────────────────────────────────────────
+let _videoCache = null;
+let _videoCacheAt = 0;
+const VIDEO_CACHE_TTL = 60 * 60 * 1000;
+
+export function invalidateVideoCache() {
+  _videoCache = null;
+}
+
+async function getCachedVideos() {
+  if (_videoCache && Date.now() - _videoCacheAt < VIDEO_CACHE_TTL) {
+    return _videoCache;
+  }
+  const result = await db.execute('SELECT * FROM videos');
+  _videoCache = result.rows;
+  _videoCacheAt = Date.now();
+  return _videoCache;
+}
+
+// ─── Workspace plan cache (5 min) ─────────────────────────────────────────────
+let _wsCache = null;
+let _wsCacheAt = 0;
+const WS_CACHE_TTL = 5 * 60 * 1000;
+
+async function getActiveWorkspaceIds() {
+  if (_wsCache && Date.now() - _wsCacheAt < WS_CACHE_TTL) {
+    return _wsCache;
+  }
+  const result = await db.execute('SELECT id, plan, trial_ends_at FROM workspaces');
+  const active = new Set();
+  for (const ws of result.rows) {
+    if (isPlanActive(ws)) active.add(Number(ws.id));
+  }
+  _wsCache = active;
+  _wsCacheAt = Date.now();
+  return active;
+}
+
+// ─── Batch: последний снапшот для каждого видео одним запросом ────────────────
+async function getLastStatsMap(videoIds) {
+  if (!videoIds.length) return {};
+  const placeholders = videoIds.map(() => '?').join(',');
+  const result = await db.execute({
+    sql: `SELECT video_id, views, likes FROM stats_snapshots
+          WHERE id IN (
+            SELECT MAX(id) FROM stats_snapshots
+            WHERE video_id IN (${placeholders})
+            GROUP BY video_id
+          )`,
+    args: videoIds,
+  });
+  const map = {};
+  result.rows.forEach(r => { map[Number(r.video_id)] = r; });
+  return map;
+}
+
 function getAgeInDays(publishedAt, addedAt) {
   const date = publishedAt || addedAt;
   if (!date) return 999;
@@ -26,16 +82,6 @@ function shouldRefresh(video, nowHour) {
   return dayOfWeek === 0 && nowHour === 4;
 }
 
-// Кеш статусов воркспейсов чтобы не дёргать БД на каждое видео
-async function getActiveWorkspaceIds() {
-  const result = await db.execute('SELECT id, plan, trial_ends_at FROM workspaces');
-  const active = new Set();
-  for (const ws of result.rows) {
-    if (isPlanActive(ws)) active.add(Number(ws.id));
-  }
-  return active;
-}
-
 export function setupCron() {
   cron.schedule('0 * * * *', async () => {
     const nowHour = new Date().getUTCHours();
@@ -48,12 +94,9 @@ export function setupCron() {
 
 export async function refreshSmartStats(nowHour = new Date().getUTCHours()) {
   const activeWsIds = await getActiveWorkspaceIds();
-
-  const result = await db.execute('SELECT * FROM videos');
-  const videos = result.rows;
+  const videos = await getCachedVideos();
 
   const toRefresh = videos.filter(v => {
-    // Пропускаем видео из воркспейсов с истёкшим планом
     if (v.workspace_id && !activeWsIds.has(Number(v.workspace_id))) return false;
     return shouldRefresh(v, nowHour);
   });
@@ -64,16 +107,16 @@ export async function refreshSmartStats(nowHour = new Date().getUTCHours()) {
   }
 
   console.log(`[cron] Refreshing ${toRefresh.length} of ${videos.length} videos...`);
+
+  // Один запрос вместо N — последние снапшоты всех нужных видео
+  const lastStatsMap = await getLastStatsMap(toRefresh.map(v => Number(v.id)));
+
   let updated = 0, failed = 0;
 
   for (const video of toRefresh) {
     try {
       const stats = await fetchStatsForVideo(video);
-      const lastResult = await db.execute({
-        sql: 'SELECT * FROM stats_snapshots WHERE video_id = ? ORDER BY fetched_at DESC LIMIT 1',
-        args: [video.id],
-      });
-      const last = lastResult.rows[0];
+      const last = lastStatsMap[Number(video.id)];
       const hasChanged = !last || last.views !== stats.views || last.likes !== stats.likes;
 
       if (hasChanged) {
@@ -92,13 +135,11 @@ export async function refreshSmartStats(nowHour = new Date().getUTCHours()) {
         }
         updated++;
       }
-      // Очищаем ошибку при успехе
       await db.execute({ sql: 'UPDATE videos SET last_error = NULL WHERE id = ?', args: [video.id] });
       clearPlatformErrors(video.platform);
       await new Promise(r => setTimeout(r, 300));
     } catch (err) {
       console.error(`[cron] Failed for video ${video.id}:`, err.message);
-      // Сохраняем ошибку в БД
       try {
         await db.execute({
           sql: 'UPDATE videos SET last_error = ? WHERE id = ?',
@@ -114,22 +155,23 @@ export async function refreshSmartStats(nowHour = new Date().getUTCHours()) {
   return { updated, failed, skipped: videos.length - toRefresh.length };
 }
 
+// Ручное обновление — всегда свежий список, инвалидирует кеш
 export async function refreshAllStats() {
   const activeWsIds = await getActiveWorkspaceIds();
   const result = await db.execute('SELECT * FROM videos');
+  invalidateVideoCache();
   const videos = result.rows.filter(v => !v.workspace_id || activeWsIds.has(Number(v.workspace_id)));
 
   console.log(`[cron] Manual refresh: ${videos.length} videos...`);
+
+  const lastStatsMap = await getLastStatsMap(videos.map(v => Number(v.id)));
+
   let updated = 0, failed = 0;
 
   for (const video of videos) {
     try {
       const stats = await fetchStatsForVideo(video);
-      const lastResult = await db.execute({
-        sql: 'SELECT * FROM stats_snapshots WHERE video_id = ? ORDER BY fetched_at DESC LIMIT 1',
-        args: [video.id],
-      });
-      const last = lastResult.rows[0];
+      const last = lastStatsMap[Number(video.id)];
       const hasChanged = !last || last.views !== stats.views || last.likes !== stats.likes;
 
       if (hasChanged) {

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { detectPlatform, extractVideoId, fetchStatsForVideo } from '../fetchers.js';
 import { requireAuth, requireActivePlan } from '../middleware/auth.js';
+import { invalidateVideoCache } from '../cron.js';
 
 const router = Router();
 
@@ -74,6 +75,7 @@ router.post('/', requireAuth, requireActivePlan, async (req, res) => {
       });
     }
 
+    invalidateVideoCache();
     const final = await db.execute({
       sql: `SELECT v.*, c.name as creator_name, c.avatar_color,
               s.views, s.likes, s.comments, s.saves, s.shares, s.er
@@ -121,6 +123,7 @@ router.post('/:id/refresh', requireAuth, requireActivePlan, async (req, res) => 
 router.delete('/:id', requireAuth, requireActivePlan, async (req, res) => {
   try {
     await db.execute({ sql: 'DELETE FROM videos WHERE id = ?', args: [req.params.id] });
+    invalidateVideoCache();
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

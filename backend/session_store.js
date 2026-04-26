@@ -1,7 +1,9 @@
 import session from 'express-session';
 import { db } from './db.js';
 
-// Простой стор сессий на основе Turso/SQLite
+const _sessionCache = new Map(); // sid → { sess, at }
+const SESSION_CACHE_TTL = 5 * 60 * 1000; // 5 минут
+
 export class TursoSessionStore extends session.Store {
   constructor() {
     super();
@@ -23,17 +25,27 @@ export class TursoSessionStore extends session.Store {
   }
 
   async get(sid, callback) {
+    const cached = _sessionCache.get(sid);
+    if (cached && Date.now() - cached.at < SESSION_CACHE_TTL) {
+      return callback(null, cached.sess);
+    }
     try {
       const result = await db.execute({
         sql: 'SELECT sess FROM sessions WHERE sid = ? AND expired_at > ?',
         args: [sid, Date.now()]
       });
-      if (!result.rows.length) return callback(null, null);
-      callback(null, JSON.parse(result.rows[0].sess));
+      if (!result.rows.length) {
+        _sessionCache.delete(sid);
+        return callback(null, null);
+      }
+      const sess = JSON.parse(result.rows[0].sess);
+      _sessionCache.set(sid, { sess, at: Date.now() });
+      callback(null, sess);
     } catch (e) { callback(e); }
   }
 
   async set(sid, sess, callback) {
+    _sessionCache.set(sid, { sess, at: Date.now() });
     try {
       const expired_at = sess.cookie?.expires
         ? new Date(sess.cookie.expires).getTime()
@@ -48,6 +60,7 @@ export class TursoSessionStore extends session.Store {
   }
 
   async destroy(sid, callback) {
+    _sessionCache.delete(sid);
     try {
       await db.execute({ sql: 'DELETE FROM sessions WHERE sid = ?', args: [sid] });
       callback(null);
