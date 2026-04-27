@@ -178,4 +178,65 @@ router.delete('/snapshots/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Массовый импорт данных из Excel/CSV — только админ
+router.post('/import', async (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
+  const { rows } = req.body;
+  if (!Array.isArray(rows) || rows.length === 0) return res.status(400).json({ error: 'Нет данных' });
+
+  const wsId = req.workspaceId;
+  const results = [];
+  for (const row of rows) {
+    try {
+      const { creator_id, label, date_from, date_to, total_views, visits, cart, orders, payout } = row;
+      if (!creator_id || !label || !date_from) {
+        results.push({ error: 'Пропущены обязательные поля' });
+        continue;
+      }
+
+      const existing = await db.execute({
+        sql: 'SELECT id FROM funnel_periods WHERE creator_id = ? AND label = ? AND workspace_id = ?',
+        args: [creator_id, label, wsId],
+      });
+
+      let periodId;
+      if (existing.rows.length > 0) {
+        periodId = Number(existing.rows[0].id);
+        const sets = [];
+        const args = [];
+        if (payout != null) { sets.push('payout = ?'); args.push(payout); }
+        if (date_to)        { sets.push('date_to = ?'); args.push(date_to); }
+        if (sets.length > 0) {
+          args.push(periodId);
+          await db.execute({ sql: `UPDATE funnel_periods SET ${sets.join(', ')} WHERE id = ?`, args });
+        }
+        if (total_views != null) {
+          try { await db.execute({ sql: 'UPDATE funnel_periods SET total_views_override = ? WHERE id = ?', args: [total_views, periodId] }); } catch {}
+        }
+      } else {
+        const r = await db.execute({
+          sql: 'INSERT INTO funnel_periods (creator_id, label, date_from, date_to, is_active, payout, workspace_id) VALUES (?, ?, ?, ?, 1, ?, ?)',
+          args: [creator_id, label, date_from, date_to || null, payout ?? null, wsId],
+        });
+        periodId = Number(r.lastInsertRowid);
+        if (total_views != null) {
+          try { await db.execute({ sql: 'UPDATE funnel_periods SET total_views_override = ? WHERE id = ?', args: [total_views, periodId] }); } catch {}
+        }
+      }
+
+      if (visits != null || cart != null || orders != null) {
+        await db.execute({
+          sql: 'INSERT INTO funnel_snapshots (period_id, visits, cart, orders, note) VALUES (?, ?, ?, ?, ?)',
+          args: [periodId, visits ?? 0, cart ?? 0, orders ?? 0, 'Импорт из Excel'],
+        });
+      }
+
+      results.push({ creator_id, label, period_id: periodId, ok: true });
+    } catch (e) {
+      results.push({ error: e.message });
+    }
+  }
+  res.json({ results });
+});
+
 export default router;

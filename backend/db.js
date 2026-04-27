@@ -199,6 +199,7 @@ export async function initDB() {
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN creator_sees_all_creators INTEGER DEFAULT 1'); } catch {}
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN creator_sees_funnel INTEGER DEFAULT 0'); } catch {}
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN creator_sees_own_only INTEGER DEFAULT 0'); } catch {}
+  try { await db.execute('ALTER TABLE funnel_periods ADD COLUMN total_views_override INTEGER'); } catch {}
 
   // Фикс: видео добавленные через /posts не получали workspace_id — исправляем через creator
   try {

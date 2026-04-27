@@ -128,7 +128,7 @@ export function Select({ label, children, ...props }) {
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
-export function Modal({ title, onClose, children, width = 420, 'data-tour': dataTour }) {
+export function Modal({ title, onClose, children, footer, width = 420, 'data-tour': dataTour }) {
   return (
     <div className={styles.modalBg} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal} style={{ width }} data-tour={dataTour}>
@@ -137,6 +137,7 @@ export function Modal({ title, onClose, children, width = 420, 'data-tour': data
           <button className={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
         <div className={styles.modalBody}>{children}</div>
+        {footer && <div className={styles.modalFooter}>{footer}</div>}
       </div>
     </div>
   );

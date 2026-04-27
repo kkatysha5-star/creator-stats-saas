@@ -185,7 +185,9 @@
   border-top: 1px solid var(--card-border-top);
   border-radius: var(--radius-lg);
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   animation: fadeUp 180ms ease-out both;
 }
 .modalHeader {
@@ -194,6 +196,7 @@
   justify-content: space-between;
   padding: 20px 22px 16px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .modalTitle { font-size: 15px; font-weight: 700; }
 .closeBtn {
@@ -204,9 +207,11 @@
   width: 28px; height: 28px;
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
 }
 .closeBtn:hover { color: var(--text); background: rgba(255,255,255,0.1); }
-.modalBody { padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 14px; }
+.modalBody { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; flex: 1; overflow-y: auto; min-height: 0; }
+.modalFooter { flex-shrink: 0; padding: 12px 22px 18px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); background: var(--card-bg); }
 
 /* ─── Empty ──────────────────────────────────────────────────────────────── */
 .empty {

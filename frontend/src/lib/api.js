@@ -91,6 +91,7 @@ export const api = {
   deleteFunnelPeriod: (id) => req('DELETE', `/funnel/periods/${id}`),
   addFunnelSnapshot: (periodId, body) => req('POST', `/funnel/periods/${periodId}/snapshots`, body),
   deleteFunnelSnapshot: (id) => req('DELETE', `/funnel/snapshots/${id}`),
+  importFunnel: (rows) => req('POST', '/funnel/import', { rows }),
   checkAdminPassword: async (pwd) => {
     try {
       await req('GET', '/funnel/periods/private', null, pwd);

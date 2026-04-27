@@ -49,7 +49,7 @@ nav { display: flex; flex-direction: column; gap: 2px; }
 }
 [data-theme="light"] .nav-item { color: rgba(0,0,0,0.35); }
 
-.nav-item svg { stroke: rgba(255,255,255,0.2); flex-shrink: 0; transition: stroke 150ms ease; }
+.nav-item svg { stroke: rgba(255,255,255,0.4); flex-shrink: 0; transition: stroke 150ms ease; }
 [data-theme="light"] .nav-item svg { stroke: rgba(0,0,0,0.25); }
 
 .nav-item:hover {

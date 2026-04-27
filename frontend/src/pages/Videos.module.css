@@ -76,13 +76,13 @@
 .iconBtn {
   width: 28px; height: 28px; border-radius: 8px;
   border: 1px solid var(--border); background: transparent;
-  color: var(--text3); font-size: 13px;
+  color: rgba(255,255,255,0.4); font-size: 13px;
   display: flex; align-items: center; justify-content: center;
   transition: all 150ms; cursor: pointer;
 }
-.iconBtn:hover:not(:disabled) { background: rgba(255,255,255,0.07); color: var(--text); border-color: var(--border2); }
+.iconBtn:hover:not(:disabled) { background: rgba(255,106,0,0.1); color: #ff6a00; border-color: rgba(255,106,0,0.3); }
 .iconBtn:disabled { opacity: 0.35; cursor: not-allowed; }
-.del:hover:not(:disabled) { color: #f87171 !important; border-color: rgba(248,113,113,.3) !important; }
+.del:hover:not(:disabled) { background: rgba(255,80,80,0.08) !important; color: #f87171 !important; border-color: rgba(248,113,113,.3) !important; }
 
 .mobileRow { display: none; }
 

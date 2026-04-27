@@ -144,14 +144,14 @@
   border-radius: 5px;
   border: 1px solid var(--border);
   background: transparent;
-  color: var(--text3);
+  color: rgba(255,255,255,0.4);
   font-size: 13px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   transition: all .1s;
 }
-.iconBtn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
-.del:hover { color: #ff5050 !important; border-color: rgba(255,80,80,.3) !important; }
+.iconBtn:hover { background: rgba(255,106,0,0.1); color: #ff6a00; border-color: rgba(255,106,0,0.3); }
+.del:hover { background: rgba(255,80,80,0.08) !important; color: #ff5050 !important; border-color: rgba(255,80,80,.3) !important; }
 .tiny { width: 20px; height: 20px; font-size: 11px; }
 
 /* История */
