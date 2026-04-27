@@ -22,6 +22,8 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', requireAuth, requireActivePlan, async (req, res) => {
+  if (!req.user?.email_verified) return res.status(403).json({ error: 'email_not_verified' });
+
   try {
     const wsId = req.workspaceId || req.body.workspace_id;
     if (!wsId) return res.status(400).json({ error: 'workspace_id required' });

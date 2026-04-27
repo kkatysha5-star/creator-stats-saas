@@ -11,8 +11,27 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
   const { setAuth } = useAuth();
   const navigate = useNavigate();
+
+  const resetSuccess = new URLSearchParams(window.location.search).get('reset') === 'success';
+
+  const handleForgot = async (e) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    try {
+      await api.forgotPassword(forgotEmail);
+      setForgotSent(true);
+    } catch {
+      setForgotSent(true); // не раскрываем ошибку
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,6 +63,42 @@ export default function Login() {
           <span style={{ color: 'var(--text)', fontSize: '20px', fontWeight: 700 }}>КонтентМетрика</span>
         </div>
 
+        {resetSuccess && (
+          <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: 13, color: 'var(--color-ok)', width: '100%', textAlign: 'left' }}>
+            ✓ Пароль изменён — войдите с новым паролем
+          </div>
+        )}
+
+        {/* Режим «Забыли пароль?» */}
+        {forgotMode ? (
+          forgotSent ? (
+            <>
+              <div style={{ fontSize: 36 }}>📬</div>
+              <p style={{ color: 'var(--text)', fontSize: 15, fontWeight: 600, margin: 0 }}>Письмо отправлено</p>
+              <p style={{ color: 'var(--text2)', fontSize: 13, margin: 0, textAlign: 'center' }}>
+                Если этот email зарегистрирован, письмо уже в пути. Проверьте папку «Спам».
+              </p>
+              <button className={styles.skipLink} onClick={() => { setForgotMode(false); setForgotSent(false); }}>
+                ← Вернуться ко входу
+              </button>
+            </>
+          ) : (
+            <>
+              <p style={{ color: 'var(--text)', fontSize: 16, fontWeight: 600, margin: 0 }}>Сброс пароля</p>
+              <form className={styles.form} onSubmit={handleForgot}>
+                <div className={styles.field}>
+                  <label className={styles.label}>Email</label>
+                  <input className={styles.input} type="email" placeholder="you@example.com" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} required autoFocus />
+                </div>
+                <button className={styles.submitBtn} type="submit" disabled={forgotLoading}>
+                  {forgotLoading ? '…' : 'Отправить ссылку'}
+                </button>
+              </form>
+              <button className={styles.skipLink} onClick={() => setForgotMode(false)}>← Вернуться ко входу</button>
+            </>
+          )
+        ) : (
+        <>
         {/* Табы */}
         <div className={styles.tabs}>
           <button className={[styles.tab, tab === 'login' ? styles.tabActive : ''].join(' ')} onClick={() => { setTab('login'); setError(''); }}>
@@ -101,6 +156,14 @@ export default function Login() {
             {loading ? '…' : tab === 'register' ? 'Создать аккаунт' : 'Войти'}
           </button>
         </form>
+
+        {tab === 'login' && (
+          <button className={styles.skipLink} onClick={() => { setForgotMode(true); setForgotEmail(email); }}>
+            Забыли пароль?
+          </button>
+        )}
+        </>
+        )}
       </div>
     </div>
   );

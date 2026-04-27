@@ -161,6 +161,18 @@
   background: var(--border);
 }
 
+.skipLink {
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-family: var(--font);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 0;
+  transition: color .15s;
+}
+.skipLink:hover { color: var(--text2); }
+
 @media (max-width: 480px) {
   .card { padding: 36px 24px; }
 }

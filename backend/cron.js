@@ -3,6 +3,7 @@ import { db } from './db.js';
 import { fetchStatsForVideo } from './fetchers.js';
 import { isPlanActive } from './middleware/auth.js';
 import { trackPlatformError, clearPlatformErrors } from './telegram.js';
+import { sendTrialEndingSoon, sendTrialEnded } from './email.js';
 
 // ─── Video list cache (1 hour) ────────────────────────────────────────────────
 let _videoCache = null;
@@ -82,11 +83,51 @@ function shouldRefresh(video, nowHour) {
   return dayOfWeek === 0 && nowHour === 4;
 }
 
+// ─── Trial email notifications ────────────────────────────────────────────────
+
+async function sendTrialEmails() {
+  try {
+    const result = await db.execute(`
+      SELECT w.id, w.trial_ends_at, w.emails_sent, w.created_at,
+             u.name as user_name, u.email as user_email
+      FROM workspaces w
+      JOIN users u ON u.id = w.owner_id
+      WHERE w.plan = 'trial' AND w.trial_ends_at IS NOT NULL
+    `);
+
+    const now = Date.now();
+    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+
+    for (const ws of result.rows) {
+      const endsAt = new Date(ws.trial_ends_at).getTime();
+      const sent = ws.emails_sent || '';
+      const user = { name: ws.user_name, email: ws.user_email };
+
+      if (endsAt - now <= twoDaysMs && endsAt > now && !sent.includes('trial_ending_soon')) {
+        const daysUsed = Math.max(1, Math.floor((now - new Date(ws.created_at).getTime()) / 86400000));
+        await sendTrialEndingSoon(user, daysUsed).catch(console.error);
+        const newSent = sent ? sent + ',trial_ending_soon' : 'trial_ending_soon';
+        await db.execute({ sql: 'UPDATE workspaces SET emails_sent = ? WHERE id = ?', args: [newSent, ws.id] });
+      }
+
+      if (endsAt <= now && !sent.includes('trial_ended')) {
+        await sendTrialEnded(user).catch(console.error);
+        const newSent = (ws.emails_sent || '').includes('trial_ending_soon')
+          ? ws.emails_sent + ',trial_ended' : 'trial_ended';
+        await db.execute({ sql: 'UPDATE workspaces SET emails_sent = ? WHERE id = ?', args: [newSent, ws.id] });
+      }
+    }
+  } catch (e) {
+    console.error('[cron] sendTrialEmails error:', e.message);
+  }
+}
+
 export function setupCron() {
   cron.schedule('0 * * * *', async () => {
     const nowHour = new Date().getUTCHours();
     console.log(`[cron] Tick at UTC hour ${nowHour}`);
     await refreshSmartStats(nowHour);
+    if (nowHour === 9) await sendTrialEmails();
   });
 
   console.log('[cron] Scheduled: smart stats refresh (hourly tick)');

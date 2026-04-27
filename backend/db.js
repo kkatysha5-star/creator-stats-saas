@@ -186,6 +186,15 @@ export async function initDB() {
   // Email+password auth
   try { await db.execute('ALTER TABLE users ADD COLUMN password_hash TEXT'); } catch {}
 
+  // Email verification + password reset
+  try { await db.execute('ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0'); } catch {}
+  try { await db.execute('ALTER TABLE users ADD COLUMN email_verify_token TEXT'); } catch {}
+  try { await db.execute('ALTER TABLE users ADD COLUMN reset_password_token TEXT'); } catch {}
+  try { await db.execute('ALTER TABLE users ADD COLUMN reset_password_expires INTEGER'); } catch {}
+
+  // Trial email tracking
+  try { await db.execute("ALTER TABLE workspaces ADD COLUMN emails_sent TEXT DEFAULT ''"); } catch {}
+
   // Фикс: видео добавленные через /posts не получали workspace_id — исправляем через creator
   try {
     await db.execute(`

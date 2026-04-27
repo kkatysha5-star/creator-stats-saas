@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import { randomUUID } from 'crypto';
 import bcrypt from 'bcrypt';
 import { db } from '../db.js';
+import { sendVerifyEmail, sendWelcome, sendPasswordReset } from '../email.js';
 
 const router = Router();
 
@@ -9,7 +11,6 @@ router.get('/me', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
 
   try {
-    // Получаем воркспейс и роль
     const wsResult = await db.execute({
       sql: `SELECT w.*, wm.role FROM workspaces w
             JOIN workspace_members wm ON wm.workspace_id = w.id
@@ -50,14 +51,16 @@ router.post('/register', async (req, res) => {
     if (existing.rows.length) return res.status(409).json({ error: 'Email уже зарегистрирован' });
 
     const password_hash = await bcrypt.hash(password, 10);
+    const email_verify_token = randomUUID();
+
     const result = await db.execute({
-      sql: 'INSERT INTO users (email, name, password_hash) VALUES (?, ?, ?)',
-      args: [email.trim().toLowerCase(), name.trim(), password_hash]
+      sql: 'INSERT INTO users (email, name, password_hash, email_verified, email_verify_token) VALUES (?, ?, ?, 0, ?)',
+      args: [email.trim().toLowerCase(), name.trim(), password_hash, email_verify_token]
     });
     const userId = Number(result.lastInsertRowid);
 
-    // Создаём воркспейс на trial 7 дней
-    const slug = name.trim().toLowerCase().replace(/[^a-z0-9а-яёa-z\s]/gi, '').replace(/\s+/g, '-').slice(0, 30) + '-' + Date.now().toString().slice(-4);
+    // Воркспейс trial 7 дней
+    const slug = name.trim().toLowerCase().replace(/[^a-z0-9\s]/gi, '').replace(/\s+/g, '-').slice(0, 30) + '-' + Date.now().toString().slice(-4);
     const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const wsResult = await db.execute({
       sql: 'INSERT INTO workspaces (name, slug, owner_id, plan, trial_ends_at) VALUES (?, ?, ?, ?, ?)',
@@ -71,6 +74,11 @@ router.post('/register', async (req, res) => {
 
     const userRow = await db.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [userId] });
     const user = userRow.rows[0];
+
+    // Письма (не блокируем регистрацию если упадут)
+    const verifyUrl = `https://app.cmetrika.com/verify-email?token=${email_verify_token}`;
+    sendVerifyEmail(user, verifyUrl).catch(console.error);
+    sendWelcome(user).catch(console.error);
 
     req.login(user, (err) => {
       if (err) return res.status(500).json({ error: err.message });
@@ -89,8 +97,7 @@ router.post('/login', async (req, res) => {
   try {
     const result = await db.execute({ sql: 'SELECT * FROM users WHERE email = ?', args: [email.trim().toLowerCase()] });
     const user = result.rows[0];
-    if (!user) return res.status(401).json({ error: 'Неверный email или пароль' });
-    if (!user.password_hash) return res.status(401).json({ error: 'Этот аккаунт использует вход через Google' });
+    if (!user || !user.password_hash) return res.status(401).json({ error: 'Неверный email или пароль' });
 
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ error: 'Неверный email или пароль' });
@@ -99,6 +106,92 @@ router.post('/login', async (req, res) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ ok: true });
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Повторная отправка письма подтверждения
+router.post('/resend-verify', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  if (req.user.email_verified) return res.json({ ok: true });
+
+  try {
+    const token = randomUUID();
+    await db.execute({ sql: 'UPDATE users SET email_verify_token = ? WHERE id = ?', args: [token, req.user.id] });
+    const verifyUrl = `https://app.cmetrika.com/verify-email?token=${token}`;
+    sendVerifyEmail(req.user, verifyUrl).catch(console.error);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Подтверждение почты
+router.get('/verify-email', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: 'Токен не указан' });
+
+  try {
+    const result = await db.execute({ sql: 'SELECT * FROM users WHERE email_verify_token = ?', args: [token] });
+    if (!result.rows.length) return res.status(400).json({ error: 'Недействительная ссылка' });
+
+    await db.execute({
+      sql: 'UPDATE users SET email_verified = 1, email_verify_token = NULL WHERE id = ?',
+      args: [result.rows[0].id]
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Запрос сброса пароля
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Укажите email' });
+
+  try {
+    const result = await db.execute({ sql: 'SELECT * FROM users WHERE email = ?', args: [email.trim().toLowerCase()] });
+    if (result.rows.length) {
+      const user = result.rows[0];
+      const token = randomUUID();
+      const expires = Date.now() + 60 * 60 * 1000; // 1 час
+      await db.execute({
+        sql: 'UPDATE users SET reset_password_token = ?, reset_password_expires = ? WHERE id = ?',
+        args: [token, expires, user.id]
+      });
+      const resetUrl = `https://app.cmetrika.com/reset-password?token=${token}`;
+      sendPasswordReset(user, resetUrl).catch(console.error);
+    }
+    // Всегда OK — не раскрываем есть ли такой email
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Сброс пароля
+router.post('/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Заполните все поля' });
+  if (password.length < 8) return res.status(400).json({ error: 'Пароль — минимум 8 символов' });
+
+  try {
+    const result = await db.execute({ sql: 'SELECT * FROM users WHERE reset_password_token = ?', args: [token] });
+    if (!result.rows.length) return res.status(400).json({ error: 'Недействительная ссылка' });
+
+    const user = result.rows[0];
+    if (Number(user.reset_password_expires) < Date.now()) {
+      return res.status(400).json({ error: 'Ссылка истекла. Запросите новую.' });
+    }
+
+    const password_hash = await bcrypt.hash(password, 10);
+    await db.execute({
+      sql: 'UPDATE users SET password_hash = ?, reset_password_token = NULL, reset_password_expires = NULL WHERE id = ?',
+      args: [password_hash, user.id]
+    });
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

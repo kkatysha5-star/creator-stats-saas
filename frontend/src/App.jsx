@@ -16,6 +16,8 @@ import Welcome from './pages/Welcome.jsx';
 import NotFound from './pages/NotFound.jsx';
 import Tutorial, { useTutorial } from './components/Tutorial.jsx';
 import Onboarding from './pages/Onboarding.jsx';
+import VerifyEmail from './pages/VerifyEmail.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 import { api } from './lib/api.js';
 import './App.css';
 
@@ -100,6 +102,8 @@ export default function App() {
           <Route path="/login" element={!auth ? <Login /> : <Navigate to="/" />} />
           <Route path="/onboarding" element={auth && auth.workspaces?.length === 0 ? <Welcome /> : <Navigate to="/" />} />
           <Route path="/invite/:token" element={<InviteHandler />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/404" element={<NotFound />} />
           <Route path="/*" element={
             !auth ? <Navigate to="/login" /> :
@@ -131,6 +135,37 @@ function ThemeToggle({ theme, onToggle }) {
   );
 }
 
+function EmailVerifyBanner({ user, setAuth }) {
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  if (!user || user.email_verified) return null;
+
+  const resend = async () => {
+    setLoading(true);
+    try { await api.resendVerify(); setSent(true); } catch {}
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{
+      background: 'rgba(245,158,11,0.1)', borderBottom: '1px solid rgba(245,158,11,0.3)',
+      padding: '8px 24px', fontSize: 12, color: 'var(--text2)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+    }}>
+      <span style={{ color: '#f59e0b' }}>
+        ⚠️ Подтвердите почту для полного доступа. Письмо отправлено на <strong>{user.email}</strong>
+      </span>
+      <button
+        onClick={resend}
+        disabled={loading || sent}
+        style={{ background: 'none', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 100, color: '#f59e0b', fontFamily: 'var(--font)', fontSize: 11, fontWeight: 600, padding: '4px 12px', cursor: sent ? 'default' : 'pointer', opacity: sent ? 0.7 : 1 }}
+      >
+        {sent ? '✓ Отправлено' : loading ? '…' : 'Отправить повторно'}
+      </button>
+    </div>
+  );
+}
+
 function AppLayout({ auth }) {
   const workspace = auth?.workspaces?.[0];
   const role = workspace?.role;
@@ -138,9 +173,11 @@ function AppLayout({ auth }) {
   const isManager = role === 'manager' || isOwner;
   const [showTutorial, closeTutorial] = useTutorial(role);
   const [theme, toggleTheme] = useTheme();
+  const { setAuth } = useAuth();
 
   return (
     <div className="app-layout">
+      <EmailVerifyBanner user={auth?.user} setAuth={setAuth} />
       <TrialBanner workspace={workspace} />
       <div className="app-body">
         <aside className="sidebar">

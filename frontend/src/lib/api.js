@@ -29,6 +29,10 @@ export const api = {
   register: (body) => req('POST', '/auth/register', body),
   emailLogin: (body) => req('POST', '/auth/login', body),
   logout: () => req('POST', '/auth/logout'),
+  resendVerify: () => req('POST', '/auth/resend-verify'),
+  verifyEmail: (token) => req('GET', `/auth/verify-email?token=${encodeURIComponent(token)}`),
+  forgotPassword: (email) => req('POST', '/auth/forgot-password', { email }),
+  resetPassword: (token, password) => req('POST', '/auth/reset-password', { token, password }),
 
   // Workspaces
   createWorkspace: (body) => req('POST', '/workspaces', body),
