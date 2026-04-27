@@ -50,7 +50,7 @@ router.post('/register', async (req, res) => {
     const existing = await db.execute({ sql: 'SELECT id FROM users WHERE email = ?', args: [email.trim().toLowerCase()] });
     if (existing.rows.length) return res.status(409).json({ error: 'Email уже зарегистрирован' });
 
-    const password_hash = await bcrypt.hash(password, 10);
+    const password_hash = await bcrypt.hash(password, 8);
     const email_verify_token = randomUUID();
 
     const result = await db.execute({
@@ -75,10 +75,45 @@ router.post('/register', async (req, res) => {
     const userRow = await db.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [userId] });
     const user = userRow.rows[0];
 
+    // Присоединение к воркспейсу по инвайту (если есть)
+    if (req.body.inviteToken) {
+      try {
+        const inviteResult = await db.execute({
+          sql: 'SELECT * FROM invites WHERE token = ?',
+          args: [req.body.inviteToken]
+        });
+        if (inviteResult.rows.length) {
+          const invite = inviteResult.rows[0];
+          const notExpired = !invite.expires_at || new Date(invite.expires_at) > new Date();
+          if (notExpired) {
+            await db.execute({
+              sql: 'INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role, invite_id) VALUES (?, ?, ?, ?)',
+              args: [invite.workspace_id, userId, invite.role, invite.id]
+            });
+            await db.execute({
+              sql: 'UPDATE invites SET use_count = use_count + 1 WHERE id = ?',
+              args: [invite.id]
+            });
+            // Удаляем автоматически созданный воркспейс
+            await db.execute({
+              sql: 'DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?',
+              args: [wsId, userId]
+            });
+            await db.execute({
+              sql: 'DELETE FROM workspaces WHERE id = ? AND owner_id = ?',
+              args: [wsId, userId]
+            });
+          }
+        }
+      } catch (e) { console.error('invite join error:', e.message); }
+    }
+
     // Письма (не блокируем регистрацию если упадут)
     const verifyUrl = `https://app.cmetrika.com/verify-email?token=${email_verify_token}`;
     sendVerifyEmail(user, verifyUrl).catch(console.error);
-    sendWelcome(user).catch(console.error);
+    if (!req.body.inviteToken) {
+      sendWelcome(user).catch(console.error);
+    }
 
     req.login(user, (err) => {
       if (err) return res.status(500).json({ error: err.message });
@@ -186,7 +221,7 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ error: 'Ссылка истекла. Запросите новую.' });
     }
 
-    const password_hash = await bcrypt.hash(password, 10);
+    const password_hash = await bcrypt.hash(password, 8);
     await db.execute({
       sql: 'UPDATE users SET password_hash = ?, reset_password_token = NULL, reset_password_expires = NULL WHERE id = ?',
       args: [password_hash, user.id]

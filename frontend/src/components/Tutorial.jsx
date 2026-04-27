@@ -32,15 +32,15 @@ const STEPS = [
       'Цвет аватара — визуальное отличие в списке',
       'План роликов — сколько роликов в месяц',
       'План охватов — целевые просмотры в месяц',
-      'Ставка — дневная ставка',
+      'Расчётный период — дата начала отсчёта плана',
     ],
     waitForEvent: 'tour:creator-added',
   },
-  // ── Инвайт: /settings — раздел команды ──────────────────────────────────────
+  // ── Инвайт: /creators — кнопка приглашения ──────────────────────────────────
   {
-    id: 'settings-invite',
-    route: '/settings',
-    selector: '[data-tour="team-section"]',
+    id: 'creators-invite',
+    route: '/creators',
+    selector: '[data-tour="invite-creator-btn"]',
     title: 'Пригласи креатора',
     text: 'Чтобы креатор привязался к своей карточке — отправь ему ссылку-приглашение. Он войдёт в сервис и автоматически привяжется к своей карточке. После этого его email подтянется в профиль.',
     skipIfNotFound: true,
@@ -62,9 +62,9 @@ const STEPS = [
     title: 'Вставь ссылку на ролик',
     text: 'Заполни форму и нажми Добавить — тур перейдёт автоматически.',
     bullets: [
+      'Ссылка — полный URL ролика (YouTube / TikTok / Instagram)',
       'Креатор — к кому привязан ролик',
-      'Платформа — YouTube / TikTok / Instagram',
-      'Ссылка на ролик — полный URL',
+      'Дата — опционально, подтянется из API автоматически',
     ],
     waitForEvent: 'tour:video-added',
   },
@@ -228,7 +228,7 @@ export default function Tutorial({ onClose }) {
         if (tries < 40) timerRef.current = setTimeout(find, 100);
       }
     };
-    timerRef.current = setTimeout(find, step.route ? 400 : 80);
+    timerRef.current = setTimeout(find, step.route ? 600 : 80);
     return () => { cancelled = true; clearTimeout(timerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx, loc.pathname]);

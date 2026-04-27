@@ -151,7 +151,7 @@ export default function Creators() {
                     </div>
                   </div>
                   <div className={styles.cardActions}>
-                    <button className={styles.iconBtn} onClick={() => handleInvite(c)}>✉ Пригласить</button>
+                    <button className={styles.iconBtn} onClick={() => handleInvite(c)} data-tour="invite-creator-btn">✉ Пригласить</button>
                     <button className={styles.iconBtn} onClick={() => setEditing(c)}>✎ Изменить</button>
                     <button className={styles.iconBtn + ' ' + styles.del} onClick={() => handleDelete(c.id)}>✕ Удалить</button>
                   </div>

@@ -39,7 +39,9 @@ export default function Login() {
     setLoading(true);
     try {
       if (tab === 'register') {
-        await api.register({ name, email, password });
+        const inviteToken = localStorage.getItem('pendingInviteToken') || undefined;
+        await api.register({ name, email, password, inviteToken });
+        if (inviteToken) localStorage.removeItem('pendingInviteToken');
       } else {
         await api.emailLogin({ email, password });
       }
@@ -155,6 +157,11 @@ export default function Login() {
           <button className={styles.submitBtn} type="submit" disabled={loading}>
             {loading ? '…' : tab === 'register' ? 'Создать аккаунт' : 'Войти'}
           </button>
+          {loading && tab === 'register' && (
+            <p style={{ color: 'var(--text3)', fontSize: 12, margin: 0, textAlign: 'center' }}>
+              Создаём аккаунт, это займёт пару секунд…
+            </p>
+          )}
         </form>
 
         {tab === 'login' && (

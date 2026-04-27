@@ -18,6 +18,7 @@ import Tutorial, { useTutorial } from './components/Tutorial.jsx';
 import Onboarding from './pages/Onboarding.jsx';
 import VerifyEmail from './pages/VerifyEmail.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
+import Invite from './pages/Invite.jsx';
 import { api } from './lib/api.js';
 import './App.css';
 
@@ -101,7 +102,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={!auth ? <Login /> : <Navigate to="/" />} />
           <Route path="/onboarding" element={auth && auth.workspaces?.length === 0 ? <Welcome /> : <Navigate to="/" />} />
-          <Route path="/invite/:token" element={<InviteHandler />} />
+          <Route path="/invite/:token" element={<Invite />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/404" element={<NotFound />} />
@@ -239,15 +240,3 @@ function AppLayout({ auth }) {
   );
 }
 
-function InviteHandler() {
-  const { token } = useParams();
-  const navigate = useNavigate();
-  useEffect(() => {
-    api.joinWorkspace(token).then(() => navigate('/')).catch(() => navigate('/login'));
-  }, []);
-  return (
-    <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontFamily: 'var(--font)' }}>
-      Присоединяемся…
-    </div>
-  );
-}
