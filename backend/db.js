@@ -1,17 +1,10 @@
 import { createClient } from '@libsql/client';
 import 'dotenv/config';
 
-const isProduction = process.env.NODE_ENV === 'production';
-
 export const db = createClient(
-  isProduction
-    ? {
-        url: process.env.TURSO_DB_URL,
-        authToken: process.env.TURSO_DB_TOKEN,
-      }
-    : {
-        url: 'file:./data.db',
-      }
+  process.env.TURSO_DB_URL
+    ? { url: process.env.TURSO_DB_URL, authToken: process.env.TURSO_DB_TOKEN }
+    : { url: 'file:./data.db' }
 );
 
 export async function initDB() {
