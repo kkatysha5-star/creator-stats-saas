@@ -26,6 +26,8 @@ export const api = {
   // Auth
   getMe: () => req('GET', '/auth/me'),
   updateMe: (body) => req('PUT', '/auth/me', body),
+  register: (body) => req('POST', '/auth/register', body),
+  emailLogin: (body) => req('POST', '/auth/login', body),
   logout: () => req('POST', '/auth/logout'),
 
   // Workspaces

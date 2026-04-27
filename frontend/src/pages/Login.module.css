@@ -54,6 +54,113 @@
 
 .hint { font-size: 12px; color: var(--text3); margin-top: 4px; font-weight: 400; }
 
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
+}
+.tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text3);
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 7px 0;
+  cursor: pointer;
+  transition: all 150ms;
+}
+.tab:hover { color: var(--text2); }
+.tabActive {
+  background: var(--bg2);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}
+
+/* ── Form ─────────────────────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+}
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+  letter-spacing: 0.2px;
+}
+.input {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 150ms;
+  width: 100%;
+}
+.input:focus { border-color: #ff6a00; }
+.input::placeholder { color: var(--text3); }
+
+.error {
+  font-size: 12.5px;
+  color: #f87171;
+  margin: 0;
+  text-align: left;
+}
+[data-theme="light"] .error { color: #dc2626; }
+
+.submitBtn {
+  background: #ff6a00;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px;
+  cursor: pointer;
+  transition: opacity 150ms;
+  width: 100%;
+  margin-top: 2px;
+}
+.submitBtn:hover:not(:disabled) { opacity: 0.88; }
+.submitBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Divider ──────────────────────────────────────────────────────────────── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  color: var(--text3);
+  font-size: 12px;
+}
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 @media (max-width: 480px) {
   .card { padding: 36px 24px; }
 }

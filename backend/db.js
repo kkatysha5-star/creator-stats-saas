@@ -183,6 +183,9 @@ export async function initDB() {
   // Дата старта расчётного периода на самом креаторе (резерв если нет воронки)
   try { await db.execute('ALTER TABLE creators ADD COLUMN period_start TEXT'); } catch {}
 
+  // Email+password auth
+  try { await db.execute('ALTER TABLE users ADD COLUMN password_hash TEXT'); } catch {}
+
   // Фикс: видео добавленные через /posts не получали workspace_id — исправляем через creator
   try {
     await db.execute(`
