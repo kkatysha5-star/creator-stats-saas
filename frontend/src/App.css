@@ -141,6 +141,8 @@ nav { display: flex; flex-direction: column; gap: 2px; }
 }
 
 /* ─── Mobile ──────────────────────────────────────────────────────────────── */
+.nav-settings-mobile-label { display: none; }
+
 @media (max-width: 768px) {
   .app-layout { flex-direction: column; height: 100dvh; }
   .app-body { flex-direction: column; overflow: visible; flex: 1; }
@@ -158,6 +160,7 @@ nav { display: flex; flex-direction: column; gap: 2px; }
   }
 
   .sidebar-logo { display: none; }
+  .sidebar-bottom { display: none; }
 
   nav {
     flex-direction: row;
@@ -182,6 +185,10 @@ nav { display: flex; flex-direction: column; gap: 2px; }
     background: transparent;
     color: #ff6a00;
   }
+
+  .nav-settings-label { display: none; }
+  .nav-settings-avatar { display: none; }
+  .nav-settings-mobile-label { display: block; font-size: 9.5px; }
 
   .main-content { order: 1; flex: 1; overflow-y: auto; min-height: 0; }
 }

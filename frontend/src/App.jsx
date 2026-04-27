@@ -214,21 +214,22 @@ function AppLayout({ auth }) {
                 <BarChart2 size={16} strokeWidth={1.2} /> Воронка
               </NavLink>
             )}
-          </nav>
-
-          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4, padding: '0 0 4px' }}>
-            <ThemeToggle theme={theme} onToggle={toggleTheme} />
-
-            <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'} style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 4 }}>
+            {/* Settings — в nav чтобы не вываливаться из flex-ряда на мобиле */}
+            <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active nav-settings' : 'nav-item nav-settings'}>
               <Settings2 size={16} strokeWidth={1.2} />
-              <div style={{ overflow: 'hidden', flex: 1 }}>
+              <div style={{ overflow: 'hidden', flex: 1 }} className="nav-settings-label">
                 <div style={{ fontSize: 12, fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{auth?.user?.name}</div>
                 <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 400 }}>Настройки</div>
               </div>
               {auth?.user?.avatar && (
-                <img src={auth.user.avatar} style={{ width: 22, height: 22, borderRadius: '50%', marginLeft: 'auto', flexShrink: 0 }} alt="" />
+                <img src={auth.user.avatar} style={{ width: 22, height: 22, borderRadius: '50%', marginLeft: 'auto', flexShrink: 0 }} className="nav-settings-avatar" alt="" />
               )}
+              <span className="nav-settings-mobile-label">Настройки</span>
             </NavLink>
+          </nav>
+
+          <div className="sidebar-bottom">
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
           </div>
         </aside>
 
