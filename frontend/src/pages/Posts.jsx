@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api.js';
 import { fmtNum, fmtEr, platformMeta, periodToDates } from '../lib/utils.js';
-import { PageHeader, PeriodTabs, PlatformBadge, Avatar, Btn, Input, Select, Modal, Loader, Empty } from '../components/UI.jsx';
+import { PageHeader, PeriodTabs, PlatformBadge, Avatar, Btn, Input, Select, Modal, Loader, Empty, DatePicker } from '../components/UI.jsx';
 import styles from './Posts.module.css';
 
 export default function Posts() {
@@ -272,7 +272,7 @@ function AddPostModal({ creators, onClose, onSaved }) {
       <Select label="Креатор" value={creatorId} onChange={e => setCreatorId(e.target.value)}>
         {creators.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </Select>
-      <Input label="Дата публикации (необязательно)" type="date" value={publishedAt} onChange={e => setPublishedAt(e.target.value)} />
+      <DatePicker label="Дата публикации (необязательно)" value={publishedAt} onChange={v => setPublishedAt(v)} placeholder="дд.мм.гггг" />
       {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <Btn onClick={onClose}>Отмена</Btn>

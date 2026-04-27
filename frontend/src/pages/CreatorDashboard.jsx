@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta, planColor, pluralVideos, reachScheduleStatus } from '../lib/utils.js';
-import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Btn, Input, Select, Modal, Loader, Empty, PlatformBadge, CompareSelector } from '../components/UI.jsx';
+import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Btn, Input, Select, Modal, Loader, Empty, PlatformBadge, CompareSelector, DatePicker } from '../components/UI.jsx';
 import styles from './CreatorDashboard.module.css';
 
 export default function CreatorDashboard() {
@@ -358,7 +358,7 @@ function AddVideoModal({ creatorId, creatorName, onClose, onSaved }) {
     <Modal title={`Новый ролик — ${creatorName}`} onClose={onClose}>
       <p style={{ fontSize: 12, color: 'var(--text3)' }}>Добавьте ссылку на ролик — название подтянется автоматически.</p>
       <Input label="Ссылка (YouTube / TikTok / Instagram)" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} />
-      <Input label="Дата публикации (необязательно)" type="date" value={publishedAt} onChange={e => setPublishedAt(e.target.value)} />
+      <DatePicker label="Дата публикации (необязательно)" value={publishedAt} onChange={v => setPublishedAt(v)} placeholder="дд.мм.гггг" />
       {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <Btn onClick={onClose}>Отмена</Btn>

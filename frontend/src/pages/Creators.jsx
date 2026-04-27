@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 import { fmtNum } from '../lib/utils.js';
-import { PageHeader, Avatar, Btn, Input, Modal, Loader, Empty, showToast } from '../components/UI.jsx';
+import { PageHeader, Avatar, Btn, Input, Modal, Loader, Empty, showToast, DatePicker } from '../components/UI.jsx';
 import { useAuth } from '../App.jsx';
 import styles from './Creators.module.css';
 
@@ -315,8 +315,7 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
 
       <Input label="📅 Роликов в день (для расчёта отставания)" placeholder="2" type="number" value={dailyRate} onChange={e => setDailyRate(e.target.value)} />
       <Input label="👁 План охватов в месяц (просмотры)" placeholder="0" type="number" value={reachPlan} onChange={e => setReachPlan(e.target.value)} />
-      <Input label="Дата старта расчётного периода" type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)}
-        style={{ colorScheme: 'dark' }} />
+      <DatePicker label="Дата старта расчётного периода" value={periodStart} onChange={v => setPeriodStart(v)} />
 
       <div>
         <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 8, fontWeight: 500 }}>Цвет аватара</p>

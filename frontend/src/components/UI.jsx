@@ -252,7 +252,7 @@ export function ProgressBar({ pct, color }) {
 const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const DAYS_RU = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 
-export function DatePicker({ value, onChange, placeholder = 'Дата' }) {
+export function DatePicker({ value, onChange, placeholder = 'Дата', label }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState(() => {
     if (value) { const d = new Date(value + 'T00:00:00'); return { y: d.getFullYear(), m: d.getMonth() }; }
@@ -291,7 +291,7 @@ export function DatePicker({ value, onChange, placeholder = 'Дата' }) {
     return `${da}.${mo}.${yr}`;
   };
 
-  return (
+  const picker = (
     <div ref={ref} className={styles.dpWrap}>
       <button
         className={styles.dpTrigger}
@@ -349,6 +349,15 @@ export function DatePicker({ value, onChange, placeholder = 'Дата' }) {
       )}
     </div>
   );
+  if (label) {
+    return (
+      <div className={styles.field}>
+        <label className={styles.label}>{label}</label>
+        {picker}
+      </div>
+    );
+  }
+  return picker;
 }
 
 // ─── Compare Selector ────────────────────────────────────────────────────────

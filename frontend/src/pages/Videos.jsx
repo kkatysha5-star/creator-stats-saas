@@ -3,7 +3,7 @@ import { api } from '../lib/api.js';
 import { fmtNum, fmtEr, platformMeta, periodToDates } from '../lib/utils.js';
 import {
   PageHeader, PeriodTabs, PlatformBadge, Avatar, Btn, Input, Select,
-  Modal, Loader, Empty
+  Modal, Loader, Empty, DatePicker
 } from '../components/UI.jsx';
 import styles from './Videos.module.css';
 
@@ -253,11 +253,11 @@ function AddVideoModal({ creators, onClose, onSaved }) {
       <Select label="Креатор" value={creatorId} onChange={e => setCreatorId(e.target.value)}>
         {creators.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </Select>
-      <Input
+      <DatePicker
         label="Дата публикации (необязательно — подтянется из API)"
-        type="date"
         value={publishedAt}
-        onChange={e => setPublishedAt(e.target.value)}
+        onChange={v => setPublishedAt(v)}
+        placeholder="дд.мм.гггг"
       />
       {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>

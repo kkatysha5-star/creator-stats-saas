@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { api } from '../lib/api.js';
 import { fmtNum } from '../lib/utils.js';
-import { PageHeader, Avatar, Btn, Input, Select, Modal, Loader, Empty } from '../components/UI.jsx';
+import { PageHeader, Avatar, Btn, Input, Select, Modal, Loader, Empty, DatePicker } from '../components/UI.jsx';
 import { useAuth } from '../App.jsx';
 import styles from './Funnel.module.css';
 
@@ -613,10 +613,10 @@ function ImportModal({ creators, onClose, onSaved }) {
           <Input label="Название периода" placeholder="Апрель 26" value={label} onChange={e => setLabel(e.target.value)} />
         </div>
         <div style={{ flex: 1 }}>
-          <Input label="Дата начала" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+          <DatePicker label="Дата начала" value={dateFrom} onChange={v => setDateFrom(v)} />
         </div>
         <div style={{ flex: 1 }}>
-          <Input label="Дата конца" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+          <DatePicker label="Дата конца" value={dateTo} onChange={v => setDateTo(v)} />
         </div>
       </div>
 
@@ -738,8 +738,8 @@ function NewPeriodModal({ creators, onClose, onSaved }) {
         {creators.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </Select>
       <Input label="Название периода" placeholder="Апрель 26" value={label} onChange={e => setLabel(e.target.value)} />
-      <Input label="Дата начала работы этого креатора" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-      <Input label="Дата окончания (можно оставить пустой)" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+      <DatePicker label="Дата начала работы этого креатора" value={dateFrom} onChange={v => setDateFrom(v)} />
+      <DatePicker label="Дата окончания (можно оставить пустой)" value={dateTo} onChange={v => setDateTo(v)} />
       {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
     </Modal>
   );
@@ -799,7 +799,7 @@ function EditPeriodModal({ period, onClose, onSaved }) {
       footer={<><Btn onClick={onClose}>Отмена</Btn><Btn variant="primary" onClick={handleSave} loading={loading}>Сохранить</Btn></>}
     >
       <Input label="Название" value={label} onChange={e => setLabel(e.target.value)} />
-      <Input label="Дата окончания" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+      <DatePicker label="Дата окончания" value={dateTo} onChange={v => setDateTo(v)} />
       <Input label="Выплата креатору (₽) 🔒" type="number" placeholder="0" value={payout} onChange={e => setPayout(e.target.value)} />
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text2)', cursor: 'pointer' }}>
         <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} />
