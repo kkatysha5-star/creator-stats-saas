@@ -33,7 +33,9 @@
   letter-spacing: -0.3px;
 }
 
-nav { display: flex; flex-direction: column; gap: 2px; }
+nav { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; }
+
+.nav-settings { margin-top: auto; }
 
 .nav-item {
   display: flex;
