@@ -78,7 +78,7 @@ export default function Posts() {
   return (
     <div className={styles.page}>
       <PageHeader title="Ролики" subtitle={`${posts.length} роликов за выбранный период`}>
-        <Btn variant="primary" onClick={() => setShowAdd(true)}>+ Добавить ролик</Btn>
+        <span data-tour="add-post"><Btn variant="primary" onClick={() => { setShowAdd(true); window.dispatchEvent(new CustomEvent('tour:post-form-opened')); }}>+ Добавить ролик</Btn></span>
       </PageHeader>
 
       <div className={styles.toolbar}>
@@ -106,7 +106,7 @@ export default function Posts() {
                 expanded={expandedId === post.id}
                 onToggle={() => setExpandedId(expandedId === post.id ? null : post.id)}
                 onDelete={() => handleDeletePost(post.id)}
-                onAddVideo={() => setAddingVideoTo(post)}
+                onAddVideo={() => { setAddingVideoTo(post); window.dispatchEvent(new CustomEvent('tour:platform-form-opened')); }}
                 onDeleteVideo={(videoId) => handleDeleteVideo(post.id, videoId)}
                 onRefreshVideo={handleRefreshVideo}
                 onRefreshAll={() => handleRefreshAll(post.videos)}
@@ -122,7 +122,11 @@ export default function Posts() {
         <AddPostModal
           creators={creators}
           onClose={() => setShowAdd(false)}
-          onSaved={() => { setShowAdd(false); load(); }}
+          onSaved={() => {
+            setShowAdd(false);
+            load();
+            window.dispatchEvent(new CustomEvent('tour:video-added'));
+          }}
         />
       )}
       {addingVideoTo && (
@@ -262,7 +266,7 @@ function AddPostModal({ creators, onClose, onSaved }) {
   };
 
   return (
-    <Modal title="Новый ролик" onClose={onClose}>
+    <Modal title="Новый ролик" onClose={onClose} data-tour="post-modal">
       <p style={{ fontSize: 12, color: 'var(--text3)' }}>Добавьте первую ссылку — название подтянется автоматически. Остальные платформы можно добавить потом.</p>
       <Input label="Ссылка (YouTube / TikTok / Instagram)" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} />
       <Select label="Креатор" value={creatorId} onChange={e => setCreatorId(e.target.value)}>

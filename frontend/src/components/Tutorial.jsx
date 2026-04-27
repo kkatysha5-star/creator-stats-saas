@@ -8,16 +8,15 @@ const PAD = 12;
 const TW = 300;
 
 const STEPS = [
-  // ── 1a: Страница /creators — кнопка добавления ──────────────────────────────
+  // ── 1a: /creators — кнопка добавления ───────────────────────────────────────
   {
     id: 'creator-btn',
     route: '/creators',
     selector: '[data-tour="add-creator"]',
     title: 'Добавь первого креатора',
-    text: 'Начнём с добавления креатора. Нажми кнопку — откроется форма. Потом его можно удалить, это просто тест.',
-    actionLabel: 'Добавить креатора →',
-    clickSelector: '[data-tour="add-creator"] button, [data-tour="add-creator"]',
-    autoNext: 350,
+    text: 'Начнём с добавления креатора. Нажми кнопку + Добавить — откроется форма.',
+    // Нет actionLabel: пользователь кликает реальную кнопку
+    waitForEvent: 'tour:creator-form-opened',
   },
   // ── 1b: Форма добавления креатора ────────────────────────────────────────────
   {
@@ -37,28 +36,35 @@ const STEPS = [
     ],
     waitForEvent: 'tour:creator-added',
   },
-  // ── 2a: Страница /videos — кнопка добавления ─────────────────────────────────
+  // ── Инвайт: /settings — раздел команды ──────────────────────────────────────
+  {
+    id: 'settings-invite',
+    route: '/settings',
+    selector: '[data-tour="team-section"]',
+    title: 'Пригласи креатора',
+    text: 'Чтобы креатор привязался к своей карточке — отправь ему ссылку-приглашение. Он войдёт в сервис и автоматически привяжется к своей карточке. После этого его email подтянется в профиль.',
+    skipIfNotFound: true,
+  },
+  // ── 2a: /posts — кнопка добавления ролика ────────────────────────────────────
   {
     id: 'video-btn',
-    route: '/videos',
-    selector: '[data-tour="add-video"]',
+    route: '/posts',
+    selector: '[data-tour="add-post"]',
     title: 'Добавь первый ролик',
-    text: 'Теперь добавим ролик. Вставь ссылку с YouTube, TikTok или Instagram — статистика подтянется автоматически.',
-    actionLabel: 'Добавить ролик →',
-    clickSelector: '[data-tour="add-video"] button, [data-tour="add-video"]',
-    autoNext: 350,
+    text: 'Нажми кнопку + Добавить ролик. Вставь ссылку с YouTube, TikTok или Instagram — статистика подтянется автоматически.',
+    waitForEvent: 'tour:post-form-opened',
   },
   // ── 2b: Форма добавления ролика ──────────────────────────────────────────────
   {
     id: 'video-form',
-    route: '/videos',
-    selector: '[data-tour="video-modal"]',
+    route: '/posts',
+    selector: '[data-tour="post-modal"]',
     title: 'Вставь ссылку на ролик',
     text: 'Заполни форму и нажми Добавить — тур перейдёт автоматически.',
     bullets: [
       'Креатор — к кому привязан ролик',
-      'Ссылка — полный URL видео',
-      'Дата — подтянется из API',
+      'Платформа — YouTube / TikTok / Instagram',
+      'Ссылка на ролик — полный URL',
     ],
     waitForEvent: 'tour:video-added',
   },
@@ -68,10 +74,9 @@ const STEPS = [
     route: '/posts',
     selector: '[data-tour="add-platform"]',
     title: 'Добавь вторую платформу',
-    text: 'Один ролик можно отслеживать сразу на нескольких платформах. Нажми + чтобы добавить тот же контент с другой платформы.',
-    actionLabel: 'Попробовать →',
-    clickSelector: '[data-tour="add-platform"]',
-    waitForEvent: 'tour:platform-added',
+    text: 'Один ролик можно отслеживать на нескольких платформах сразу. Нажми + чтобы добавить ссылку на этот же контент с другой платформы.',
+    // Нет actionLabel: пользователь кликает реальный "+"
+    waitForEvent: 'tour:platform-form-opened',
     skipIfNotFound: true,
   },
   // ── 4a: Дашборд — метрики ────────────────────────────────────────────────────
@@ -83,7 +88,7 @@ const STEPS = [
     text: 'Сводная статистика всей команды за выбранный период — просмотры, лайки, ER.',
     skipIfNotFound: true,
   },
-  // ── 4b: Просмотры по платформам ──────────────────────────────────────────────
+  // ── 4б: Просмотры по платформам ──────────────────────────────────────────────
   {
     id: 'dash-plat',
     route: '/',
@@ -110,6 +115,7 @@ const STEPS = [
     text: 'Нажми на имя — откроется личный дашборд с детальной статистикой по каждому ролику.',
     actionLabel: 'Посмотреть →',
     clickSelector: '[data-tour="creator-row"]',
+    autoNext: 1500,
     skipIfNotFound: true,
   },
   // ── 5: База роликов (/videos) ────────────────────────────────────────────────
@@ -128,7 +134,6 @@ const STEPS = [
     selector: null,
     isDemo: true,
     title: 'Воронка продаж',
-    text: 'Доступна на тарифе Про. Показывает путь от просмотра до покупки: охваты → заходы → корзина → заказы. Видно CAC каждого креатора и окупаемость.',
   },
   // ── 7a: Настройки — профиль ──────────────────────────────────────────────────
   {
@@ -166,22 +171,20 @@ const STEPS = [
 ];
 
 // ── Позиция tooltip ───────────────────────────────────────────────────────────
-
 function getPos(rect) {
   const W = window.innerWidth, H = window.innerHeight, G = 16;
-  const cy = y => Math.max(8, Math.min(H - 280, y));
+  const cy = y => Math.max(8, Math.min(H - 300, y));
   const cx = x => Math.max(8, Math.min(W - TW - 8, x));
   if (rect.right + G + TW <= W)
-    return { left: rect.right + G, top: cy(rect.top + rect.height / 2 - 110) };
+    return { left: rect.right + G, top: cy(rect.top + rect.height / 2 - 120) };
   if (rect.left - G - TW >= 0)
-    return { left: rect.left - G - TW, top: cy(rect.top + rect.height / 2 - 110) };
-  if (rect.bottom + G + 280 <= H)
+    return { left: rect.left - G - TW, top: cy(rect.top + rect.height / 2 - 120) };
+  if (rect.bottom + G + 300 <= H)
     return { left: cx(rect.left + rect.width / 2 - TW / 2), top: rect.bottom + G };
-  return { left: cx(rect.left + rect.width / 2 - TW / 2), top: Math.max(8, rect.top - G - 250) };
+  return { left: cx(rect.left + rect.width / 2 - TW / 2), top: Math.max(8, rect.top - G - 260) };
 }
 
 // ── Компонент ─────────────────────────────────────────────────────────────────
-
 export default function Tutorial({ onClose }) {
   const [idx, setIdx] = useState(0);
   const [rect, setRect] = useState(null);
@@ -200,10 +203,10 @@ export default function Tutorial({ onClose }) {
     setRect(null);
     setIdx(i => {
       const n = i + 1;
-      return n < STEPS.length ? n : i;
+      if (n >= STEPS.length) { finish(); return i; }
+      return n;
     });
-    if (idx >= STEPS.length - 1) finish();
-  }, [idx, finish]);
+  }, [finish]);
 
   // ── Навигация + поиск элемента ────────────────────────────────────────────
   useEffect(() => {
@@ -233,12 +236,12 @@ export default function Tutorial({ onClose }) {
   // ── Событие авто-перехода ─────────────────────────────────────────────────
   useEffect(() => {
     if (!step.waitForEvent) return;
-    const h = () => setTimeout(next, 500);
+    const h = () => setTimeout(next, 400);
     window.addEventListener(step.waitForEvent, h);
     return () => window.removeEventListener(step.waitForEvent, h);
   }, [step.waitForEvent, next]);
 
-  // ── Обновление позиции при ресайзе ────────────────────────────────────────
+  // ── Ресайз ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!rect || !step.selector) return;
     const update = () => {
@@ -249,7 +252,7 @@ export default function Tutorial({ onClose }) {
     return () => window.removeEventListener('resize', update);
   }, [rect, step.selector]);
 
-  // ── Клик по целевому элементу ─────────────────────────────────────────────
+  // ── Клик по целевому элементу (только для dash-creator) ───────────────────
   const doAction = useCallback(() => {
     if (!step.clickSelector) return;
     const sel = step.clickSelector.split(',').map(s => s.trim());
@@ -285,11 +288,13 @@ export default function Tutorial({ onClose }) {
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
         <SkipBtn onSkip={finish} />
-        <div className={styles.tooltip} style={{ width: Math.min(560, window.innerWidth - 32), maxWidth: 560 }}>
+        <div className={styles.tooltip} style={{ width: Math.min(780, window.innerWidth - 32), maxWidth: 780 }}>
           <Progress idx={idx} />
           <h3 className={styles.title}>{step.title}</h3>
-          <p className={styles.text}>{step.text}</p>
           <FunnelDemo />
+          <p className={styles.text} style={{ marginTop: 4 }}>
+            Воронка продаж доступна на тарифе Про. Видно CAC каждого креатора, конверсия на каждом этапе и окупаемость.
+          </p>
           <div className={styles.nav}>
             <button className={styles.skipBtn} onClick={finish}>Пропустить</button>
             <button className={styles.nextBtn} onClick={next}>Понятно →</button>
@@ -299,7 +304,6 @@ export default function Tutorial({ onClose }) {
     );
   }
 
-  // ── Ожидание элемента ─────────────────────────────────────────────────────
   if (!rect) return null;
 
   const sx = rect.left - PAD, sy = rect.top - PAD;
@@ -312,9 +316,8 @@ export default function Tutorial({ onClose }) {
       <SkipBtn onSkip={finish} />
 
       {/*
-        Spotlight via box-shadow.
-        pointer-events: none → все клики проходят насквозь к элементу.
-        Сам элемент за spotlight'ом кликабелен — overlay его не блокирует.
+        pointer-events: none → клики проходят насквозь к элементу под overlay.
+        Реальная кнопка на странице остаётся кликабельной.
       */}
       <div style={{
         position: 'fixed', left: sx, top: sy, width: sw, height: sh,
@@ -326,10 +329,7 @@ export default function Tutorial({ onClose }) {
       }} />
 
       {/* Tooltip */}
-      <div
-        className={styles.tooltip}
-        style={{ position: 'fixed', left: pos.left, top: pos.top, width: TW, zIndex: 9999 }}
-      >
+      <div className={styles.tooltip} style={{ position: 'fixed', left: pos.left, top: pos.top, width: TW, zIndex: 9999 }}>
         <Progress idx={idx} />
         <h3 className={styles.title}>{step.title}</h3>
         <p className={styles.text}>{step.text}</p>
@@ -340,7 +340,8 @@ export default function Tutorial({ onClose }) {
         )}
 
         <div className={styles.nav}>
-          <button className={styles.skipBtn} onClick={finish}>Пропустить</button>
+          {/* Пропустить — всегда слева */}
+          <div /> {/* placeholder для flex spacing */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {step.actionLabel && (
               <button className={styles.actionBtn} onClick={doAction}>
@@ -349,11 +350,11 @@ export default function Tutorial({ onClose }) {
             )}
             {step.waitForEvent ? (
               <span className={styles.waitHint}>↑ выполни действие</span>
-            ) : !(step.autoNext && step.actionLabel) && (
+            ) : !(step.autoNext && step.actionLabel) ? (
               <button className={styles.nextBtn} onClick={next}>
                 {isLast ? 'Завершить ✓' : 'Далее →'}
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -363,18 +364,19 @@ export default function Tutorial({ onClose }) {
 
 // ── Вспомогательные компоненты ────────────────────────────────────────────────
 
+// Проблема 2: кнопка "Пропустить" — левый нижний угол
 function SkipBtn({ onSkip }) {
   return (
     <button
       onClick={onSkip}
       style={{
-        position: 'fixed', top: 14, right: 14, zIndex: 10000,
+        position: 'fixed', bottom: 20, left: 20, zIndex: 10000,
         background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
-        borderRadius: 100, color: 'rgba(255,255,255,0.75)', fontFamily: 'var(--font)',
+        borderRadius: 100, color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font)',
         fontSize: 12, padding: '6px 14px', cursor: 'pointer', backdropFilter: 'blur(4px)',
       }}
     >
-      Пропустить ✕
+      Пропустить тур
     </button>
   );
 }
@@ -389,33 +391,42 @@ function Progress({ idx }) {
   );
 }
 
+// Проблема 7: полная таблица воронки
 function FunnelDemo() {
-  const rows = [
-    { name: 'Мария К.',   views: '186 400', visits: '2 230', cart: '890', orders: '178', cac: '1 120 ₽', cr: '2.1%' },
-    { name: 'Дмитрий В.', views: '124 800', visits: '1 490', cart: '595', orders: '119', cac: '1 345 ₽', cr: '1.9%' },
-    { name: 'Елена С.',   views: '97 300',  visits: '1 169', cart: '409', orders: '82',  cac: '1 220 ₽', cr: '2.0%' },
+  const heads = [
+    'КРЕАТОР','ОХВАТ','ЗАХОДЫ','ЗАХ/ОХВ','КОРЗИНА','КОРЗ/ЗАХ',
+    'КОРЗ/ОХВ','ЗАКАЗЫ','ЗАК/КОРЗ','ЗАК/ОХВ','CPM','ВЫПЛАТА','CAC',
   ];
-  const heads = ['Креатор', 'Охваты', 'Заходы', 'Корзина', 'Заказы', 'CAC', 'CR'];
+  const rows = [
+    ['Мария К.',  '185 420','2 341','1.26%','892','38.1%','0.48%','134','15.0%','0.07%','₽198','₽42 000','₽313'],
+    ['Дмитрий В.','124 880','1 156','0.93%','487','42.1%','0.39%', '89','18.3%','0.07%','₽278','₽38 000','₽427'],
+    ['Елена С.',  '143 670',  '987','0.69%','398','40.3%','0.28%', '67','16.8%','0.05%','₽412','₽35 000','₽522'],
+  ];
   return (
-    <div style={{ overflowX: 'auto', margin: '6px 0', borderRadius: 8, border: '1px solid var(--border)' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+    <div style={{ overflowX: 'auto', margin: '8px 0', borderRadius: 8, border: '1px solid var(--border)' }}>
+      <table style={{ borderCollapse: 'collapse', fontSize: 11, whiteSpace: 'nowrap' }}>
         <thead>
-          <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg3)' }}>
+          <tr style={{ background: 'var(--bg3)', borderBottom: '1px solid var(--border)' }}>
             {heads.map((h, i) => (
-              <th key={h} style={{ padding: '7px 10px', color: 'var(--text3)', fontWeight: 600, textAlign: i === 0 ? 'left' : 'right', whiteSpace: 'nowrap' }}>{h}</th>
+              <th key={h} style={{ padding: '6px 9px', color: 'var(--text3)', fontWeight: 700, textAlign: i === 0 ? 'left' : 'right', letterSpacing: '0.3px' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map(r => (
-            <tr key={r.name} style={{ borderBottom: '1px solid var(--border)' }}>
-              <td style={{ padding: '8px 10px', color: 'var(--text)', fontWeight: 600 }}>{r.name}</td>
-              <td style={{ padding: '8px 10px', color: 'var(--text2)', textAlign: 'right' }}>{r.views}</td>
-              <td style={{ padding: '8px 10px', color: 'var(--text2)', textAlign: 'right' }}>{r.visits}</td>
-              <td style={{ padding: '8px 10px', color: 'var(--text2)', textAlign: 'right' }}>{r.cart}</td>
-              <td style={{ padding: '8px 10px', color: 'var(--text)', textAlign: 'right', fontWeight: 700 }}>{r.orders}</td>
-              <td style={{ padding: '8px 10px', color: '#ff6a00', textAlign: 'right', fontWeight: 700 }}>{r.cac}</td>
-              <td style={{ padding: '8px 10px', color: 'var(--color-ok)', textAlign: 'right', fontWeight: 700 }}>{r.cr}</td>
+            <tr key={r[0]} style={{ borderBottom: '1px solid var(--border)' }}>
+              <td style={{ padding: '7px 9px', color: 'var(--text)', fontWeight: 600 }}>{r[0]}</td>
+              {r.slice(1).map((v, i) => {
+                const isOrders = i === 6; // ЗАКАЗЫ
+                const isCac = i === 11;   // CAC
+                const isConv = [2,4,7,8].includes(i);
+                return (
+                  <td key={i} style={{
+                    padding: '7px 9px', textAlign: 'right', fontWeight: isOrders || isCac ? 700 : 400,
+                    color: isCac ? '#ff6a00' : isOrders ? 'var(--text)' : isConv ? 'var(--color-ok)' : 'var(--text2)',
+                  }}>{v}</td>
+                );
+              })}
             </tr>
           ))}
         </tbody>

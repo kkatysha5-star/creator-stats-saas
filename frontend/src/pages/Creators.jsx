@@ -76,7 +76,10 @@ export default function Creators() {
 
   const handleAddClick = () => {
     if (atLimit) setShowLimit(true);
-    else setShowAdd(true);
+    else {
+      setShowAdd(true);
+      window.dispatchEvent(new CustomEvent('tour:creator-form-opened'));
+    }
   };
 
   const load = async () => {
