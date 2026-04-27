@@ -143,6 +143,17 @@
 }
 .submitBtn:hover:not(:disabled) { opacity: 0.88; }
 .submitBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+.submitBtn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; }
+
+.btnSpinner {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
 
 /* ── Divider ──────────────────────────────────────────────────────────────── */
 .divider {

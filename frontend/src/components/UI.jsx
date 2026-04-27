@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { platformMeta, getInitials } from '../lib/utils.js';
 import styles from './UI.module.css';
 
@@ -156,6 +156,13 @@ export function Empty({ icon = '📭', text, sub }) {
 
 // ─── Skeleton Loader ─────────────────────────────────────────────────────────
 export function Loader({ type = 'cards', rows = 4 }) {
+  if (type === 'spin') {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '56px 0' }}>
+        <div className={styles.spinnerOrange} />
+      </div>
+    );
+  }
   if (type === 'rows') {
     return (
       <div style={{ padding: '0 28px', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -170,6 +177,41 @@ export function Loader({ type = 'cards', rows = 4 }) {
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className={`skeleton-base ${styles.skeletonCard}`} />
       ))}
+    </div>
+  );
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+let _setToast = null;
+
+export function showToast(msg) {
+  _setToast?.(msg);
+}
+
+export function ToastProvider() {
+  const [msg, setMsg] = useState(null);
+  _setToast = setMsg;
+  useEffect(() => {
+    if (!msg) return;
+    const t = setTimeout(() => setMsg(null), 2200);
+    return () => clearTimeout(t);
+  }, [msg]);
+  if (!msg) return null;
+  return (
+    <div style={{
+      position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+      background: 'var(--card-bg)', border: '1px solid rgba(255,255,255,0.12)',
+      borderRadius: 100, padding: '9px 18px', fontSize: 13, color: 'var(--text)',
+      zIndex: 9999, pointerEvents: 'none', whiteSpace: 'nowrap',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', gap: 8,
+      animation: 'fadeUp 150ms ease-out both',
+    }}>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <circle cx="7" cy="7" r="6.5" stroke="#4ade80" strokeWidth="1.2"/>
+        <path d="M4 7l2 2 4-4" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      {msg}
     </div>
   );
 }

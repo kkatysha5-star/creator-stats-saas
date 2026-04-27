@@ -93,7 +93,7 @@ export default function Login() {
                   <input className={styles.input} type="email" placeholder="you@example.com" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} required autoFocus />
                 </div>
                 <button className={styles.submitBtn} type="submit" disabled={forgotLoading}>
-                  {forgotLoading ? '…' : 'Отправить ссылку'}
+                  {forgotLoading ? <span className={styles.btnSpinner} /> : 'Отправить ссылку'}
                 </button>
               </form>
               <button className={styles.skipLink} onClick={() => setForgotMode(false)}>← Вернуться ко входу</button>
@@ -155,7 +155,7 @@ export default function Login() {
           {error && <p className={styles.error}>{error}</p>}
 
           <button className={styles.submitBtn} type="submit" disabled={loading}>
-            {loading ? '…' : tab === 'register' ? 'Создать аккаунт' : 'Войти'}
+            {loading ? <span className={styles.btnSpinner} /> : (tab === 'register' ? 'Создать аккаунт' : 'Войти')}
           </button>
           {loading && tab === 'register' && (
             <p style={{ color: 'var(--text3)', fontSize: 12, margin: 0, textAlign: 'center' }}>

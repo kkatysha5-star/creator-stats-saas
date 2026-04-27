@@ -242,9 +242,31 @@
   border: 2px solid rgba(255,255,255,0.2);
   border-top-color: currentColor;
   border-radius: 50%;
-  animation: spin .6s linear infinite;
+  animation: spin .7s linear infinite;
   display: inline-block;
+  flex-shrink: 0;
 }
+
+/* Брендовый оранжевый спиннер — для страниц/контента */
+.spinnerOrange {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(255,106,0,0.15);
+  border-top-color: #ff6a00;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ─── Date input ─────────────────────────────────────────────────────────── */
+.input[type="date"] { color-scheme: dark; }
+[data-theme="light"] .input[type="date"] { color-scheme: light; }
+.input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(45%) sepia(95%) saturate(500%) hue-rotate(345deg) brightness(1.1);
+  cursor: pointer;
+  opacity: 0.7;
+  border-radius: 3px;
+}
+.input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 
 /* ─── Progress Bar ───────────────────────────────────────────────────────── */
 .progressTrack {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pencil } from 'lucide-react';
+import { Pencil, Crown, Film, ClipboardList, Lock, Check, X, Clock } from 'lucide-react';
 import { useAuth } from '../App.jsx';
 import { TUTORIAL_KEY } from '../components/Tutorial.jsx';
 import { api } from '../lib/api.js';
@@ -262,13 +262,20 @@ export default function Settings() {
               </div>
               {daysLeft !== null && (
                 <span style={{ fontSize: 12, color: daysLeft === 0 ? '#ef4444' : daysLeft <= 2 ? '#f59e0b' : 'var(--text3)' }}>
-                  {daysLeft === 0 ? '🔒 Истёк' : `⏱ ${daysLeft} дн.`}
+                  {daysLeft === 0
+                    ? <><Lock size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} /> Истёк</>
+                    : <><Clock size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />{daysLeft} дн.</>}
                 </span>
               )}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text3)', display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span>Креаторы: до {planInfo.creators}</span>
-              <span>Воронка продаж: {planInfo.funnel ? '✅' : '❌'}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                Воронка продаж:{' '}
+                {planInfo.funnel
+                  ? <Check size={12} stroke="#4ade80" strokeWidth={2.5} />
+                  : <X size={12} stroke="rgba(255,255,255,0.3)" strokeWidth={2.5} />}
+              </span>
             </div>
             <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Доступные тарифы:</p>
@@ -297,7 +304,13 @@ export default function Settings() {
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Контент-завод</h2>
             <div className={styles.roleBadge}>
-              Ваша роль: <strong>{workspace.role === 'owner' ? '👑 Владелец' : workspace.role === 'manager' ? '📋 Менеджер' : '🎬 Креатор'}</strong>
+              Ваша роль: <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                {workspace.role === 'owner'
+                  ? <><Crown size={13} stroke="#ff6a00" strokeWidth={1.8} /> Владелец</>
+                  : workspace.role === 'manager'
+                  ? <><ClipboardList size={13} stroke="rgba(255,255,255,0.7)" strokeWidth={1.8} /> Менеджер</>
+                  : <><Film size={13} stroke="rgba(255,255,255,0.7)" strokeWidth={1.8} /> Креатор</>}
+              </strong>
             </div>
           </div>
         )}
@@ -334,8 +347,9 @@ export default function Settings() {
                 />
               )}
               {!isPro && (
-                <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>
-                  🔒 Доступ к воронке для креаторов — только на тарифе Pro
+                <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Lock size={11} stroke="rgba(255,255,255,0.35)" strokeWidth={2} />
+                  Доступ к воронке для креаторов — только на тарифе Pro
                 </p>
               )}
             </div>
@@ -363,7 +377,11 @@ export default function Settings() {
                       <span className={styles.memberEmail}>{m.email}</span>
                     </div>
                     <span className={styles.memberRole}>
-                      {m.role === 'owner' ? '👑' : m.role === 'manager' ? '📋' : '🎬'} {m.role}
+                      {m.role === 'owner'
+                        ? <Crown size={12} stroke="#ff6a00" strokeWidth={2} />
+                        : m.role === 'manager'
+                        ? <ClipboardList size={12} stroke="rgba(255,255,255,0.5)" strokeWidth={2} />
+                        : <Film size={12} stroke="rgba(255,255,255,0.5)" strokeWidth={2} />}{' '}{m.role}
                     </span>
                   </div>
                 ))}
@@ -376,8 +394,8 @@ export default function Settings() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div className={styles.inviteRoles}>
                   {[
-                    { value: 'creator', label: '🎬 Креатор', desc: 'Видит статистику команды, вносит свои ролики' },
-                    { value: 'manager', label: '📋 Менеджер', desc: 'Вносит изменения в воронку продаж' },
+                    { value: 'creator', label: 'Креатор', desc: 'Видит статистику команды, вносит свои ролики' },
+                    { value: 'manager', label: 'Менеджер', desc: 'Вносит изменения в воронку продаж' },
                   ].map(r => (
                     <button
                       key={r.value}
@@ -465,7 +483,7 @@ function InviteCard({ invite, copied, onCopy, onDelete }) {
   const [showJoiners, setShowJoiners] = useState(false);
   const isExpired = invite.is_expired;
   const expiresDate = invite.expires_at ? new Date(invite.expires_at).toLocaleDateString('ru-RU') : '—';
-  const roleLabel = { creator: '🎬 Креатор', manager: '📋 Менеджер', owner: '👑 Владелец' }[invite.role] || invite.role;
+  const roleLabel = { creator: 'Креатор', manager: 'Менеджер', owner: 'Владелец' }[invite.role] || invite.role;
 
   return (
     <div style={{
@@ -477,7 +495,9 @@ function InviteCard({ invite, copied, onCopy, onDelete }) {
         <span style={{ fontSize: 12, fontWeight: 600 }}>{invite.label || roleLabel}</span>
         <span style={{ fontSize: 11, color: 'var(--text3)', background: 'var(--bg4)', padding: '1px 6px', borderRadius: 3 }}>{roleLabel}</span>
         <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>
-          {isExpired ? '🔒 Истекла' : `до ${expiresDate}`}
+          {isExpired
+            ? <><Lock size={10} style={{ verticalAlign: 'middle', marginRight: 3 }} />Истекла</>
+            : `до ${expiresDate}`}
         </span>
       </div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>

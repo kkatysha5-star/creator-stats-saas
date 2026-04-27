@@ -32,7 +32,7 @@ const STEPS = [
       'Цвет аватара — визуальное отличие в списке',
       'План роликов — сколько роликов в месяц',
       'План охватов — целевые просмотры в месяц',
-      'Расчётный период — дата начала отсчёта плана',
+      'Расчётный период — дата начала работы. Позволяет отслеживать отставание от графика публикаций',
     ],
     waitForEvent: 'tour:creator-added',
   },
@@ -76,7 +76,7 @@ const STEPS = [
     title: 'Добавь вторую платформу',
     text: 'Один ролик можно отслеживать на нескольких платформах сразу. Нажми + чтобы добавить ссылку на этот же контент с другой платформы.',
     // Нет actionLabel: пользователь кликает реальный "+"
-    waitForEvent: 'tour:platform-form-opened',
+    waitForEvent: 'tour:platform-added',
     skipIfNotFound: true,
   },
   // ── 4a: Дашборд — метрики ────────────────────────────────────────────────────
@@ -166,7 +166,7 @@ const STEPS = [
     selector: null,
     isFinal: true,
     title: 'Готово!',
-    text: 'Теперь ты знаешь как пользоваться КонтентМетрикой. Удачи с контент-заводом 🚀',
+    text: 'Теперь ты знаешь как пользоваться КонтентМетрикой. Удачи с контент-заводом!',
   },
 ];
 
@@ -272,7 +272,13 @@ export default function Tutorial({ onClose }) {
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className={styles.tooltip} style={{ width: TW + 60, textAlign: 'center', gap: 16 }}>
-          <div style={{ fontSize: 52, lineHeight: 1 }}>🚀</div>
+          <div style={{ width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,106,0,0.12)', borderRadius: '50%' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff6a00" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="rgba(255,106,0,0.15)" stroke="none"/>
+              <path d="M9 12l2 2 4-4"/>
+              <circle cx="12" cy="12" r="10"/>
+            </svg>
+          </div>
           <h3 className={styles.title} style={{ fontSize: 22 }}>{step.title}</h3>
           <p className={styles.text}>{step.text}</p>
           <button className={styles.nextBtn} onClick={finish} style={{ width: '100%', marginTop: 4 }}>

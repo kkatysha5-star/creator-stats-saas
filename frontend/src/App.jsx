@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, createContext, useContext } from 'react';
 import {
-  LayoutGrid, PlayCircle, Link as LinkIcon, Users, BarChart2, Settings2, Sun, Moon,
+  LayoutGrid, PlayCircle, Link as LinkIcon, Users, BarChart2, Settings2, Sun, Moon, Lock, Clock,
 } from 'lucide-react';
 
 import Dashboard from './pages/Dashboard.jsx';
@@ -20,6 +20,7 @@ import VerifyEmail from './pages/VerifyEmail.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import Invite from './pages/Invite.jsx';
 import { api } from './lib/api.js';
+import { ToastProvider } from './components/UI.jsx';
 import './App.css';
 
 export const AuthContext = createContext(null);
@@ -60,8 +61,11 @@ function TrialBanner({ workspace }) {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
       fontWeight: 500,
     }}>
-      <span style={{ color: isExpired ? '#f87171' : '#ffaa60' }}>
-        {isExpired ? '🔒' : '⏱'} {text}
+      <span style={{ color: isExpired ? '#f87171' : '#ffaa60', display: 'flex', alignItems: 'center', gap: 6 }}>
+        {isExpired
+          ? <Lock size={12} strokeWidth={2} style={{ flexShrink: 0 }} />
+          : <Clock size={12} strokeWidth={2} style={{ flexShrink: 0 }} />}
+        {text}
       </span>
       {!isExpired && (
         <a href="/settings" style={{ color: '#ff6a00', fontWeight: 700, textDecoration: 'none', fontSize: 11 }}>
@@ -98,6 +102,7 @@ export default function App() {
 
   return (
     <AuthContext.Provider value={{ auth, setAuth }}>
+      <ToastProvider />
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={!auth ? <Login /> : <Navigate to="/" />} />

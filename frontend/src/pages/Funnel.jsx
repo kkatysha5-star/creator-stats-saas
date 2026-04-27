@@ -15,7 +15,11 @@ function FunnelUpgradeWall() {
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       padding: '80px 24px', gap: 16, textAlign: 'center',
     }}>
-      <div style={{ fontSize: 48, lineHeight: 1 }}>📊</div>
+      <div style={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,106,0,0.1)', borderRadius: 16 }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff6a00" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+      </div>
       <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: -0.4 }}>
         Воронка продаж — тариф Pro
       </div>
@@ -220,7 +224,7 @@ function FunnelInner() {
       </div>
 
       {loading ? <Loader /> : currentPeriods.length === 0
-        ? <Empty icon="📊" text="Нет данных за этот период" sub={isAdmin ? 'Создайте периоды для креаторов' : 'Данные ещё не внесены'} />
+        ? <Empty icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>} text="Нет данных за этот период" sub={isAdmin ? 'Создайте периоды для креаторов' : 'Данные ещё не внесены'} />
         : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
