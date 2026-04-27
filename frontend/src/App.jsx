@@ -172,9 +172,17 @@ function AppLayout({ auth }) {
   const role = workspace?.role;
   const isOwner = role === 'owner';
   const isManager = role === 'manager' || isOwner;
+  const isPro = workspace?.plan === 'pro';
   const [showTutorial, closeTutorial] = useTutorial(role);
   const [theme, toggleTheme] = useTheme();
   const { setAuth } = useAuth();
+
+  // Воронка: owner всегда (upsell если не pro), остальные только если pro+разрешено
+  const canSeeFunnel = isOwner || (isPro && !!workspace?.creator_sees_funnel);
+  // Раздел Креаторы: manager/owner + creator если разрешено настройками
+  const canSeeCreators = isManager
+    || !!workspace?.creator_sees_all_creators
+    || !!workspace?.creator_sees_own_only;
 
   return (
     <div className="app-layout">
@@ -196,14 +204,16 @@ function AppLayout({ auth }) {
             <NavLink to="/videos" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
               <LinkIcon size={16} strokeWidth={1.2} /> Все ссылки
             </NavLink>
-            {isManager && (
+            {canSeeCreators && (
               <NavLink to="/creators" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
                 <Users size={16} strokeWidth={1.2} /> Креаторы
               </NavLink>
             )}
-            <NavLink to="/funnel" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
-              <BarChart2 size={16} strokeWidth={1.2} /> Воронка
-            </NavLink>
+            {canSeeFunnel && (
+              <NavLink to="/funnel" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                <BarChart2 size={16} strokeWidth={1.2} /> Воронка
+              </NavLink>
+            )}
           </nav>
 
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4, padding: '0 0 4px' }}>
@@ -228,9 +238,9 @@ function AppLayout({ auth }) {
             <Route path="/" element={<Dashboard />} />
             <Route path="/posts" element={<Posts />} />
             <Route path="/videos" element={<Videos />} />
-            <Route path="/creators" element={isManager ? <Creators /> : <Navigate to="/" />} />
+            <Route path="/creators" element={canSeeCreators ? <Creators /> : <Navigate to="/" />} />
             <Route path="/creator/:id" element={<CreatorDashboard />} />
-            <Route path="/funnel" element={<Funnel />} />
+            <Route path="/funnel" element={canSeeFunnel ? <Funnel /> : <Navigate to="/" />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

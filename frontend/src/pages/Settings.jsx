@@ -36,6 +36,35 @@ export default function Settings() {
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
 
+  const isPro = workspace?.plan === 'pro';
+
+  // Настройки видимости для creator роли
+  const [visSettings, setVisSettings] = useState({
+    creator_sees_all_creators: workspace?.creator_sees_all_creators !== 0,
+    creator_sees_funnel: !!workspace?.creator_sees_funnel,
+    creator_sees_own_only: !!workspace?.creator_sees_own_only,
+  });
+  const [savingVis, setSavingVis] = useState(false);
+
+  const handleVisSetting = async (key, value) => {
+    const next = { ...visSettings, [key]: value };
+    // Логика взаимоисключения: all_creators и own_only не могут быть оба true
+    if (key === 'creator_sees_all_creators' && value) next.creator_sees_own_only = false;
+    if (key === 'creator_sees_own_only' && value) next.creator_sees_all_creators = false;
+    setVisSettings(next);
+    setSavingVis(true);
+    try {
+      await api.updateWorkspaceSettings(workspace.id, next);
+      setAuth(prev => ({
+        ...prev,
+        workspaces: prev.workspaces.map(w =>
+          w.id === workspace.id ? { ...w, ...next } : w
+        ),
+      }));
+    } catch (e) { console.error(e); }
+    finally { setSavingVis(false); }
+  };
+
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.name || '');
   const [savingName, setSavingName] = useState(false);
@@ -273,6 +302,46 @@ export default function Settings() {
           </div>
         )}
 
+        {/* Настройки видимости для креаторов (только owner) */}
+        {isOwner && workspace && (
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle} style={{ marginBottom: 6 }}>Видимость для креаторов</h2>
+            <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
+              Что видят пользователи с ролью 🎬 Креатор
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <VisSetting
+                label="Видят всю команду"
+                desc="Каждый креатор видит карточки всех участников"
+                value={visSettings.creator_sees_all_creators}
+                onChange={v => handleVisSetting('creator_sees_all_creators', v)}
+                disabled={savingVis}
+              />
+              <VisSetting
+                label="Видят только себя"
+                desc="Каждый креатор видит только свою карточку"
+                value={visSettings.creator_sees_own_only}
+                onChange={v => handleVisSetting('creator_sees_own_only', v)}
+                disabled={savingVis}
+              />
+              {isPro && (
+                <VisSetting
+                  label="Видят раздел Воронка"
+                  desc="Разрешить просмотр воронки продаж"
+                  value={visSettings.creator_sees_funnel}
+                  onChange={v => handleVisSetting('creator_sees_funnel', v)}
+                  disabled={savingVis}
+                />
+              )}
+              {!isPro && (
+                <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>
+                  🔒 Доступ к воронке для креаторов — только на тарифе Pro
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>{/* /leftCol */}
 
       {/* Правая колонка — Команда */}
@@ -364,6 +433,30 @@ export default function Settings() {
       </div>{/* /rightCol */}
 
       </div>{/* /layout */}
+    </div>
+  );
+}
+
+function VisSetting({ label, desc, value, onChange, disabled }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{label}</div>
+        <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{desc}</div>
+      </div>
+      <button
+        onClick={() => !disabled && onChange(!value)}
+        style={{
+          width: 40, height: 22, borderRadius: 100, border: 'none', cursor: disabled ? 'default' : 'pointer',
+          background: value ? '#ff6a00' : 'var(--bg4)', position: 'relative', flexShrink: 0,
+          transition: 'background 200ms', opacity: disabled ? 0.6 : 1,
+        }}
+      >
+        <span style={{
+          position: 'absolute', top: 3, width: 16, height: 16, borderRadius: '50%', background: '#fff',
+          left: value ? 21 : 3, transition: 'left 200ms',
+        }} />
+      </button>
     </div>
   );
 }

@@ -195,6 +195,11 @@ export async function initDB() {
   // Trial email tracking
   try { await db.execute("ALTER TABLE workspaces ADD COLUMN emails_sent TEXT DEFAULT ''"); } catch {}
 
+  // Настройки видимости для роли creator
+  try { await db.execute('ALTER TABLE workspaces ADD COLUMN creator_sees_all_creators INTEGER DEFAULT 1'); } catch {}
+  try { await db.execute('ALTER TABLE workspaces ADD COLUMN creator_sees_funnel INTEGER DEFAULT 0'); } catch {}
+  try { await db.execute('ALTER TABLE workspaces ADD COLUMN creator_sees_own_only INTEGER DEFAULT 0'); } catch {}
+
   // Фикс: видео добавленные через /posts не получали workspace_id — исправляем через creator
   try {
     await db.execute(`

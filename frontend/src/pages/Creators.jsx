@@ -63,6 +63,10 @@ export default function Creators() {
   const workspace = auth?.workspaces?.[0];
   const plan = workspace?.plan || 'trial';
   const limit = PLAN_LIMITS[plan] ?? 1;
+  const role = workspace?.role;
+  const canEdit = role === 'owner' || role === 'manager';
+  const seesOwnOnly = role === 'creator' && !!workspace?.creator_sees_own_only;
+  const userEmail = auth?.user?.email;
 
   const [creators, setCreators] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -129,14 +133,18 @@ export default function Creators() {
           </span>
         }
       >
-        <span data-tour="add-creator"><Btn variant="primary" onClick={handleAddClick}>+ Добавить</Btn></span>
+        {canEdit && (
+          <span data-tour="add-creator"><Btn variant="primary" onClick={handleAddClick}>+ Добавить</Btn></span>
+        )}
       </PageHeader>
 
       {loading ? <Loader /> : creators.length === 0
-        ? <Empty icon="👤" text="Нет креаторов" sub="Добавьте первого креатора" />
+        ? <Empty icon="👤" text="Нет креаторов" sub={canEdit ? 'Добавьте первого креатора' : 'Список пуст'} />
         : (
           <div className={styles.grid + ' fade-in'}>
-            {creators.map(c => {
+            {creators
+              .filter(c => !seesOwnOnly || c.email === userEmail || c.name === auth?.user?.name)
+              .map(c => {
               const monthPlan = c.video_plan_period === 'week'
                 ? (c.video_plan_count || 0) * 4
                 : (c.video_plan_count || 0);
@@ -150,11 +158,13 @@ export default function Creators() {
                       {!c.email && c.username && <p className={styles.username}>@{c.username}</p>}
                     </div>
                   </div>
-                  <div className={styles.cardActions}>
-                    <button className={styles.iconBtn} onClick={() => handleInvite(c)} data-tour="invite-creator-btn">✉ Пригласить</button>
-                    <button className={styles.iconBtn} onClick={() => setEditing(c)}>✎ Изменить</button>
-                    <button className={styles.iconBtn + ' ' + styles.del} onClick={() => handleDelete(c.id)}>✕ Удалить</button>
-                  </div>
+                  {canEdit && (
+                    <div className={styles.cardActions}>
+                      <button className={styles.iconBtn} onClick={() => handleInvite(c)} data-tour="invite-creator-btn">✉ Пригласить</button>
+                      <button className={styles.iconBtn} onClick={() => setEditing(c)}>✎ Изменить</button>
+                      <button className={styles.iconBtn + ' ' + styles.del} onClick={() => handleDelete(c.id)}>✕ Удалить</button>
+                    </div>
+                  )}
 
                   {(monthPlan > 0 || c.reach_plan > 0) && (
                     <div className={styles.plans}>

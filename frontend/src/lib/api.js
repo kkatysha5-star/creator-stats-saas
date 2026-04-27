@@ -36,6 +36,7 @@ export const api = {
 
   // Workspaces
   createWorkspace: (body) => req('POST', '/workspaces', body),
+  updateWorkspaceSettings: (id, body) => req('PUT', `/workspaces/${id}/settings`, body),
   getWorkspace: (id) => req('GET', `/workspaces/${id}`),
   getMembers: (wsId) => req('GET', `/workspaces/${wsId}/members`),
   getInvites: (wsId) => req('GET', `/workspaces/${wsId}/invites`),

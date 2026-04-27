@@ -137,6 +137,29 @@ router.delete('/:id/invites/:inviteId', requireAuth, requireRole(['owner', 'mana
   }
 });
 
+// Настройки видимости для роли creator
+router.put('/:id/settings', requireAuth, requireRole(['owner']), async (req, res) => {
+  try {
+    const { creator_sees_all_creators, creator_sees_funnel, creator_sees_own_only } = req.body;
+    await db.execute({
+      sql: `UPDATE workspaces
+            SET creator_sees_all_creators = ?,
+                creator_sees_funnel = ?,
+                creator_sees_own_only = ?
+            WHERE id = ?`,
+      args: [
+        creator_sees_all_creators ? 1 : 0,
+        creator_sees_funnel ? 1 : 0,
+        creator_sees_own_only ? 1 : 0,
+        req.params.id,
+      ],
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Принять инвайт (многоразовый — не помечаем как использованный)
 router.post('/join/:token', requireAuth, async (req, res) => {
   try {
