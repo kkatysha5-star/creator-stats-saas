@@ -6,7 +6,8 @@ const router = Router();
 
 // Начало входа через Google
 router.get('/google', passport.authenticate('google', {
-  scope: ['profile', 'email']
+  scope: ['profile', 'email'],
+  prompt: 'select_account',
 }));
 
 // Callback после Google
