@@ -1,40 +1,8 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
-import passport from '../config/auth.js';
 import { db } from '../db.js';
 
 const router = Router();
-
-// Начало входа через Google
-router.get('/google', passport.authenticate('google', {
-  scope: ['profile', 'email'],
-  prompt: 'select_account',
-}));
-
-// Callback после Google
-router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND_URL}/login?error=auth_failed` }),
-  async (req, res) => {
-    try {
-      const user = req.user;
-
-      const wsResult = await db.execute({
-        sql: `SELECT w.* FROM workspaces w
-              JOIN workspace_members wm ON wm.workspace_id = w.id
-              WHERE wm.user_id = ? LIMIT 1`,
-        args: [user.id]
-      });
-
-      if (wsResult.rows.length === 0) {
-        res.redirect(`${process.env.FRONTEND_URL}/onboarding`);
-      } else {
-        res.redirect(`${process.env.FRONTEND_URL}/`);
-      }
-    } catch (err) {
-      res.redirect(`${process.env.FRONTEND_URL}/login?error=server_error`);
-    }
-  }
-);
 
 // Текущий пользователь
 router.get('/me', async (req, res) => {
