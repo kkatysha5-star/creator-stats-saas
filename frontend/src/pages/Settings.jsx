@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pencil } from 'lucide-react';
 import { useAuth } from '../App.jsx';
+import { TUTORIAL_KEY } from '../components/Tutorial.jsx';
 import { api } from '../lib/api.js';
 import { PageHeader, Avatar, Btn, Input, Modal, Loader } from '../components/UI.jsx';
 import styles from './Settings.module.css';
@@ -213,8 +214,7 @@ export default function Settings() {
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             <Btn onClick={handleLogout}>Выйти из аккаунта</Btn>
             <Btn onClick={() => {
-              const role = workspace?.role;
-              if (role) localStorage.removeItem('tutorial_seen_v1_' + role);
+              localStorage.removeItem(TUTORIAL_KEY);
               window.location.reload();
             }}>
               📖 Показать обучение снова

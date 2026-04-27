@@ -74,7 +74,7 @@ export default function Videos() {
   return (
     <div className={styles.page}>
       <PageHeader title="Видео" subtitle={`${sorted.length} роликов за выбранный период`}>
-        <Btn variant="primary" onClick={() => setShowAdd(true)}>+ Добавить видео</Btn>
+        <span data-tour="add-video"><Btn variant="primary" onClick={() => setShowAdd(true)}>+ Добавить видео</Btn></span>
       </PageHeader>
 
       <div className={styles.toolbar}>
@@ -128,7 +128,11 @@ export default function Videos() {
         <AddVideoModal
           creators={creators}
           onClose={() => setShowAdd(false)}
-          onSaved={() => { setShowAdd(false); load(); }}
+          onSaved={() => {
+            setShowAdd(false);
+            load();
+            window.dispatchEvent(new CustomEvent('tour:video-added'));
+          }}
         />
       )}
     </div>
