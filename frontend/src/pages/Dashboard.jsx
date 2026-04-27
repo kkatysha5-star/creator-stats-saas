@@ -190,7 +190,7 @@ export default function Dashboard() {
               ↔ сравнение: {COMPARE_OPTIONS.find(o => o.value === compareWith)?.label}
             </div>
           )}
-          <div className={styles.metrics}>
+          <div className={styles.metrics} data-tour="metrics">
             {metrics.map(m => (
               <MetricCard key={m.id} label={m.label} value={m.fmt} rawValue={m.raw}
                 sub={m.sub} delta={m.delta}
@@ -203,7 +203,7 @@ export default function Dashboard() {
           {/* ── Платформы + Рейтинг ──────────────────────────────── */}
           <div className={styles.twoCol}>
             {allViews > 0 && (
-              <div className={styles.platBarsCard}>
+              <div className={styles.platBarsCard} data-tour="plat-bars">
                 <h2 className={styles.sectionTitle}>Просмотры по платформам</h2>
                 <div className={styles.platBars}>
                   {['youtube', 'tiktok', 'instagram'].map(p => {
@@ -240,7 +240,7 @@ export default function Dashboard() {
             )}
 
             {filteredCreators.length > 0 && (
-              <div className={styles.rankBlock}>
+              <div className={styles.rankBlock} data-tour="ranking">
                 <div className={styles.rankHeader}>
                   <h2 className={styles.sectionTitle} style={{ margin: 0 }}>Рейтинг</h2>
                   <div className={styles.rankTabs}>
@@ -477,7 +477,7 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
         <span>Коммент.</span>
         <span>ER</span>
       </div>
-      {creators.map(c => {
+      {creators.map((c, ci) => {
         const prev = prevMap[c.creator_id];
         const plats = c.platforms ? c.platforms.split(',').filter(p => activePlatforms.has(p)) : [];
         const mp = monthPlan(c);
@@ -490,7 +490,7 @@ function CreatorsTable({ creators, prevByCreator, activePlatforms, hasPrev, onOp
         const dv = (curr, p) => hasPrev && prev ? calcDelta(curr, p) : null;
 
         return (
-          <div key={c.creator_id} className={styles.tableRow} style={{ gridTemplateColumns: gridCols }}>
+          <div key={c.creator_id} className={styles.tableRow} style={{ gridTemplateColumns: gridCols }} {...(ci === 0 ? { 'data-tour': 'creator-row' } : {})}>
             <div className={styles.creatorCell} onClick={() => onOpen(c.creator_id)}>
               <Avatar name={c.creator_name} color={c.avatar_color} size={28} />
               <span className={styles.creatorName}>{c.creator_name}</span>

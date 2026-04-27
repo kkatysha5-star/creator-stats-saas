@@ -97,7 +97,7 @@ export default function Videos() {
       {loading ? <Loader /> : sorted.length === 0
         ? <Empty icon="🎬" text="Нет видео за выбранный период" sub="Добавьте ролики по ссылке или измените фильтры" />
         : (
-          <div className={styles.tableWrap + ' fade-in'}>
+          <div className={styles.tableWrap + ' fade-in'} data-tour="videos-list">
             <div className={styles.tableHead}>
               <span>Видео</span>
               <span>Платформа</span>
@@ -243,7 +243,7 @@ function AddVideoModal({ creators, onClose, onSaved }) {
   };
 
   return (
-    <Modal title="Добавить видео" onClose={onClose}>
+    <Modal title="Добавить видео" onClose={onClose} data-tour="video-modal">
       <Input
         label="Ссылка на видео (YouTube / TikTok / Instagram)"
         placeholder="https://youtube.com/watch?v=..."

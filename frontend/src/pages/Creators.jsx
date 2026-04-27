@@ -126,7 +126,7 @@ export default function Creators() {
           </span>
         }
       >
-        <Btn variant="primary" onClick={handleAddClick}>+ Добавить</Btn>
+        <span data-tour="add-creator"><Btn variant="primary" onClick={handleAddClick}>+ Добавить</Btn></span>
       </PageHeader>
 
       {loading ? <Loader /> : creators.length === 0
@@ -183,7 +183,11 @@ export default function Creators() {
       {showAdd && (
         <CreatorModal title="Добавить креатора" colors={COLORS}
           onClose={() => setShowAdd(false)}
-          onSaved={() => { setShowAdd(false); load(); }}
+          onSaved={() => {
+            setShowAdd(false);
+            load();
+            window.dispatchEvent(new CustomEvent('tour:creator-added'));
+          }}
         />
       )}
       {showLimit && (
@@ -278,7 +282,7 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
   };
 
   return (
-    <Modal title={title} onClose={onClose} width={380}>
+    <Modal title={title} onClose={onClose} width={380} data-tour="creator-modal">
       <Input label="Имя" placeholder="Анна К." value={name} onChange={e => setName(e.target.value)} />
       <Input label="Email (для приглашения)" placeholder="anna@example.com" type="email" value={email} onChange={e => setEmail(e.target.value)} />
       <Input label="Username (необязательно)" placeholder="@username" value={username} onChange={e => setUsername(e.target.value)} />

@@ -178,7 +178,7 @@ export default function Settings() {
         )}
 
         {/* Профиль */}
-        <div className={styles.section}>
+        <div className={styles.section} data-tour="profile-section">
           <h2 className={styles.sectionTitle}>Профиль</h2>
           <div className={styles.profileRow}>
             {user?.avatar
@@ -224,7 +224,7 @@ export default function Settings() {
 
         {/* Тариф */}
         {workspace && (
-          <div className={styles.section}>
+          <div className={styles.section} data-tour="billing-section">
             <h2 className={styles.sectionTitle}>Тариф</h2>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <div>
@@ -278,7 +278,7 @@ export default function Settings() {
       {/* Правая колонка — Команда */}
       <div className={styles.rightCol}>
         {isOwner && workspace && (
-          <div className={styles.section}>
+          <div className={styles.section} data-tour="team-section">
             <h2 className={styles.sectionTitle}>Команда</h2>
 
             {loading ? <Loader /> : (

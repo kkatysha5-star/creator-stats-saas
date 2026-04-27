@@ -128,10 +128,10 @@ export function Select({ label, children, ...props }) {
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
-export function Modal({ title, onClose, children, width = 420 }) {
+export function Modal({ title, onClose, children, width = 420, 'data-tour': dataTour }) {
   return (
     <div className={styles.modalBg} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className={styles.modal} style={{ width }}>
+      <div className={styles.modal} style={{ width }} data-tour={dataTour}>
         <div className={styles.modalHeader}>
           <h3 className={styles.modalTitle}>{title}</h3>
           <button className={styles.closeBtn} onClick={onClose}>✕</button>

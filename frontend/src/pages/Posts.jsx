@@ -129,7 +129,11 @@ export default function Posts() {
         <AddVideoModal
           post={addingVideoTo}
           onClose={() => setAddingVideoTo(null)}
-          onSaved={() => { setAddingVideoTo(null); load(); }}
+          onSaved={() => {
+            setAddingVideoTo(null);
+            load();
+            window.dispatchEvent(new CustomEvent('tour:platform-added'));
+          }}
         />
       )}
     </div>
@@ -169,7 +173,7 @@ function PostCard({ post, num, expanded, onToggle, onDelete, onAddVideo, onDelet
           <button className={styles.iconBtn} onClick={onRefreshAll} title="Обновить все платформы" disabled={post.videos?.some(v => refreshingIds.has(v.id))}>
             {post.videos?.some(v => refreshingIds.has(v.id)) ? '…' : '↻'}
           </button>
-          <button className={styles.iconBtn} onClick={onAddVideo} title="Добавить платформу">+</button>
+          <button className={styles.iconBtn} onClick={onAddVideo} title="Добавить платформу" data-tour="add-platform">+</button>
           <button className={styles.iconBtn + ' ' + styles.del} onClick={onDelete} title="Удалить">✕</button>
           <button className={styles.chevron} style={{ transform: expanded ? 'rotate(180deg)' : '' }} onClick={onToggle} title="Развернуть">▾</button>
         </div>

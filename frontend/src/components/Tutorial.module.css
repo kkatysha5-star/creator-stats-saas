@@ -3,30 +3,29 @@
   border: 1px solid var(--border2);
   border-top: 2px solid #ff6a00;
   border-radius: var(--radius);
-  padding: 20px 20px 16px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,106,0,0.12);
+  padding: 18px 18px 14px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,106,0,0.1);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  animation: tooltipIn .2s cubic-bezier(.2,.8,.4,1) both;
+  gap: 8px;
+  animation: tipIn .2s cubic-bezier(.2,.8,.4,1) both;
 }
 
-@keyframes tooltipIn {
-  from { opacity: 0; transform: translateY(6px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes tipIn {
+  from { opacity: 0; transform: translateY(6px) scale(.97); }
+  to   { opacity: 1; transform: none; }
 }
 
 .progress {
   display: flex;
-  gap: 5px;
+  gap: 4px;
   margin-bottom: 2px;
 }
-
 .dot {
-  height: 4px;
+  height: 3px;
+  flex: 1;
   border-radius: 2px;
   background: var(--border2);
-  flex: 1;
   transition: background .2s;
 }
 .dotActive { background: #ff6a00; }
@@ -47,6 +46,19 @@
   margin: 0;
 }
 
+.bullets {
+  margin: 0;
+  padding: 0 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bullets li {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
 .actionBtn {
   background: rgba(255,106,0,0.1);
   border: 1px solid rgba(255,106,0,0.35);
@@ -55,10 +67,10 @@
   font-family: var(--font);
   font-size: 13px;
   font-weight: 600;
-  padding: 8px 14px;
+  padding: 7px 14px;
   cursor: pointer;
   transition: background .15s;
-  text-align: left;
+  white-space: nowrap;
 }
 .actionBtn:hover { background: rgba(255,106,0,0.18); }
 
@@ -66,7 +78,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4px;
+  margin-top: 6px;
+  gap: 8px;
 }
 
 .skipBtn {
@@ -77,6 +90,7 @@
   font-size: 12px;
   cursor: pointer;
   padding: 4px 0;
+  flex-shrink: 0;
   transition: color .15s;
 }
 .skipBtn:hover { color: var(--text2); }
@@ -91,12 +105,14 @@
   font-weight: 600;
   padding: 8px 18px;
   cursor: pointer;
+  white-space: nowrap;
   transition: opacity .15s;
 }
-.nextBtn:hover { opacity: 0.88; }
+.nextBtn:hover { opacity: .88; }
 
 .waitHint {
   font-size: 12px;
   color: rgba(255,106,0,0.7);
   font-style: italic;
+  white-space: nowrap;
 }
