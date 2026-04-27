@@ -414,11 +414,16 @@ function InviteCard({ invite, copied, onCopy, onDelete }) {
             👥 Присоединилось: {invite.use_count} {showJoiners ? '▴' : '▾'}
           </button>
           {showJoiners && invite.joiners?.length > 0 && (
-            <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8, paddingLeft: 2 }}>
               {invite.joiners.map((j, i) => (
-                <div key={i} style={{ fontSize: 11, color: 'var(--text2)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{j.name} ({j.email})</span>
-                  <span style={{ color: 'var(--text3)' }}>{new Date(j.joined_at).toLocaleDateString('ru-RU')}</span>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{j.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>{j.email}</div>
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0, paddingTop: 2 }}>
+                    {new Date(j.joined_at).toLocaleDateString('ru-RU')}
+                  </span>
                 </div>
               ))}
             </div>

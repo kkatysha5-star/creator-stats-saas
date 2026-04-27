@@ -77,35 +77,45 @@ router.post('/register', async (req, res) => {
 
     // Присоединение к воркспейсу по инвайту (если есть)
     if (req.body.inviteToken) {
-      try {
-        const inviteResult = await db.execute({
-          sql: 'SELECT * FROM invites WHERE token = ?',
-          args: [req.body.inviteToken]
-        });
-        if (inviteResult.rows.length) {
-          const invite = inviteResult.rows[0];
-          const notExpired = !invite.expires_at || new Date(invite.expires_at) > new Date();
-          if (notExpired) {
-            await db.execute({
-              sql: 'INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role, invite_id) VALUES (?, ?, ?, ?)',
-              args: [invite.workspace_id, userId, invite.role, invite.id]
-            });
-            await db.execute({
-              sql: 'UPDATE invites SET use_count = use_count + 1 WHERE id = ?',
-              args: [invite.id]
-            });
-            // Удаляем автоматически созданный воркспейс
-            await db.execute({
-              sql: 'DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?',
-              args: [wsId, userId]
-            });
-            await db.execute({
-              sql: 'DELETE FROM workspaces WHERE id = ? AND owner_id = ?',
-              args: [wsId, userId]
-            });
-          }
+      const inviteResult = await db.execute({
+        sql: 'SELECT * FROM invites WHERE token = ?',
+        args: [req.body.inviteToken]
+      }).catch(() => ({ rows: [] }));
+
+      if (inviteResult.rows.length) {
+        const invite = inviteResult.rows[0];
+        const notExpired = !invite.expires_at || new Date(invite.expires_at) > new Date();
+
+        if (notExpired) {
+          // 1. Добавляем в воркспейс — простой INSERT без invite_id (надёжнее)
+          await db.execute({
+            sql: 'INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, ?)',
+            args: [invite.workspace_id, userId, invite.role]
+          });
+
+          // 2. Проставляем invite_id отдельно (необязательно, не критично)
+          db.execute({
+            sql: 'UPDATE workspace_members SET invite_id = ? WHERE workspace_id = ? AND user_id = ?',
+            args: [invite.id, invite.workspace_id, userId]
+          }).catch(() => {});
+
+          // 3. Инкрементируем счётчик
+          await db.execute({
+            sql: 'UPDATE invites SET use_count = use_count + 1 WHERE id = ?',
+            args: [invite.id]
+          });
+
+          // 4. Удаляем автоматически созданный личный воркспейс
+          await db.execute({
+            sql: 'DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?',
+            args: [wsId, userId]
+          });
+          await db.execute({
+            sql: 'DELETE FROM workspaces WHERE id = ? AND owner_id = ?',
+            args: [wsId, userId]
+          });
         }
-      } catch (e) { console.error('invite join error:', e.message); }
+      }
     }
 
     // Письма (не блокируем регистрацию если упадут)
