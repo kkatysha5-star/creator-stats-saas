@@ -189,6 +189,20 @@ export async function sendPaymentFailed(user, { planName, amount }) {
   await send(user.email, `Не удалось списать оплату за КонтентМетрику — требуется действие`, html);
 }
 
+// ─── 6b. Оплата принята — новый пользователь (установить пароль) ─────────────
+
+export async function sendPaymentNewUser(email, fullName, planName, resetUrl) {
+  const html = buildHtml(`
+    ${h2('Оплата принята — установите пароль')}
+    ${p(`Здравствуйте, ${fullName}!`)}
+    ${p(`Оплата прошла успешно. Тариф «${planName}» активен.`)}
+    ${p('Осталось придумать пароль — и можно приступать к работе.')}
+    ${btn(resetUrl, 'Установить пароль →')}
+    ${p('Ссылка действительна 24 часа. Если возникли трудности, пишите на <a href="mailto:support@cmetrika.com" style="color:#ff6a00;">support@cmetrika.com</a>')}
+  `);
+  await send(email, 'Оплата КонтентМетрики принята — установите пароль для входа', html);
+}
+
 // ─── 7. Сброс пароля ─────────────────────────────────────────────────────────
 
 export async function sendPasswordReset(user, resetUrl) {

@@ -21,6 +21,7 @@
     "node-cron": "^3.0.3",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
-    "resend": "^6.12.2"
+    "resend": "^6.12.2",
+    "yookassa": "^0.1.1"
   }
 }

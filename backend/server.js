@@ -21,6 +21,7 @@ import videosRouter from './routes/videos.js';
 import statsRouter from './routes/stats.js';
 import postsRouter from './routes/posts.js';
 import funnelRouter from './routes/funnel.js';
+import billingRouter, { billingWebhook } from './routes/billing.js';
 import { setupCron } from './cron.js';
 import { clearInstagramCache } from './fetchers.js';
 
@@ -91,6 +92,9 @@ app.use((req, res, next) => {
 app.use(cookieParser());
 app.use(express.json());
 
+// Webhook ЮКассы — до session middleware, парсим тело отдельно
+app.post('/api/billing/webhook', express.json(), billingWebhook);
+
 app.use(session({
   store: new TursoSessionStore(),
   secret: process.env.SESSION_SECRET || 'dev-secret',
@@ -125,6 +129,7 @@ initDB().then(() => {
   app.use('/api/stats', statsRouter);
   app.use('/api/posts', postsRouter);
   app.use('/api/funnel', funnelRouter);
+  app.use('/api/billing', billingRouter);
 
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '../frontend/dist')));

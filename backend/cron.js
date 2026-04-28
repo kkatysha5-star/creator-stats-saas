@@ -3,7 +3,7 @@ import { db } from './db.js';
 import { fetchStatsForVideo } from './fetchers.js';
 import { isPlanActive } from './middleware/auth.js';
 import { trackPlatformError, clearPlatformErrors } from './telegram.js';
-import { sendTrialEndingSoon, sendTrialEnded } from './email.js';
+import { sendTrialEndingSoon, sendTrialEnded, sendPaymentReminder } from './email.js';
 
 // ─── Video list cache (1 hour) ────────────────────────────────────────────────
 let _videoCache = null;
@@ -122,15 +122,47 @@ async function sendTrialEmails() {
   }
 }
 
+async function runBillingTasks() {
+  try {
+    // Авто-списание
+    const PORT = process.env.PORT || 3001;
+    await fetch(`http://localhost:${PORT}/api/billing/charge-subscription`, {
+      method: 'POST',
+      headers: { 'X-Internal-Token': process.env.SESSION_SECRET || 'dev-secret' },
+    }).catch(e => console.error('[cron] charge-subscription fetch error:', e.message));
+
+    // Напоминание за 3 дня
+    const in3Days = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const remind = await db.execute({
+      sql: `SELECT w.plan, u.name, u.email
+            FROM workspaces w
+            JOIN users u ON u.id = w.owner_id
+            WHERE w.subscription_active = 1 AND w.next_billing_date = ?`,
+      args: [in3Days],
+    });
+    for (const row of remind.rows) {
+      const planName = row.plan === 'start' ? 'Старт' : 'Про';
+      const amount = row.plan === 'start' ? 1990 : 3990;
+      await sendPaymentReminder(
+        { name: row.name, email: row.email },
+        { planName, amount, date: in3Days }
+      ).catch(console.error);
+    }
+  } catch (e) {
+    console.error('[cron] billing tasks error:', e.message);
+  }
+}
+
 export function setupCron() {
   cron.schedule('0 * * * *', async () => {
     const nowHour = new Date().getUTCHours();
     console.log(`[cron] Tick at UTC hour ${nowHour}`);
     await refreshSmartStats(nowHour);
     if (nowHour === 9) await sendTrialEmails();
+    if (nowHour === 7) await runBillingTasks(); // 07:00 UTC = 10:00 МСК
   });
 
-  console.log('[cron] Scheduled: smart stats refresh (hourly tick)');
+  console.log('[cron] Scheduled: smart stats refresh + billing (hourly tick)');
 }
 
 export async function refreshSmartStats(nowHour = new Date().getUTCHours()) {

@@ -92,6 +92,11 @@ export const api = {
   addFunnelSnapshot: (periodId, body) => req('POST', `/funnel/periods/${periodId}/snapshots`, body),
   deleteFunnelSnapshot: (id) => req('DELETE', `/funnel/snapshots/${id}`),
   importFunnel: (rows) => req('POST', '/funnel/import', { rows }),
+
+  // Billing
+  getBillingStatus: () => req('GET', '/billing/status'),
+  createPayment: (body) => req('POST', '/billing/create-payment', body),
+  cancelSubscription: () => req('POST', '/billing/cancel'),
   checkAdminPassword: async (pwd) => {
     try {
       await req('GET', '/funnel/periods/private', null, pwd);

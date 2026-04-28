@@ -201,6 +201,21 @@ export async function initDB() {
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN creator_sees_own_only INTEGER DEFAULT 0'); } catch {}
   try { await db.execute('ALTER TABLE funnel_periods ADD COLUMN total_views_override INTEGER'); } catch {}
 
+  // Биллинг ЮКасса
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS pending_payments (
+      payment_id TEXT PRIMARY KEY,
+      email TEXT,
+      full_name TEXT,
+      plan_id TEXT,
+      is_existing_user INTEGER,
+      created_at TEXT
+    )
+  `);
+  try { await db.execute('ALTER TABLE workspaces ADD COLUMN subscription_active INTEGER DEFAULT 0'); } catch {}
+  try { await db.execute('ALTER TABLE workspaces ADD COLUMN payment_method_id TEXT'); } catch {}
+  try { await db.execute('ALTER TABLE workspaces ADD COLUMN next_billing_date TEXT'); } catch {}
+
   // Фикс: видео добавленные через /posts не получали workspace_id — исправляем через creator
   try {
     await db.execute(`

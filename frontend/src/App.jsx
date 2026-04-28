@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, createContext, useContext } from 'react';
 import {
-  LayoutGrid, PlayCircle, Link as LinkIcon, Users, BarChart2, Settings2, Sun, Moon, Lock, Clock,
+  LayoutGrid, PlayCircle, Link as LinkIcon, Users, BarChart2, Settings2, Sun, Moon, Lock, Clock, CreditCard,
 } from 'lucide-react';
 
 import Dashboard from './pages/Dashboard.jsx';
@@ -10,6 +10,8 @@ import Videos from './pages/Videos.jsx';
 import Creators from './pages/Creators.jsx';
 import CreatorDashboard from './pages/CreatorDashboard.jsx';
 import Funnel from './pages/Funnel.jsx';
+import Billing from './pages/Billing.jsx';
+import Checkout from './pages/Checkout.jsx';
 import Login from './pages/Login.jsx';
 import Settings from './pages/Settings.jsx';
 import Welcome from './pages/Welcome.jsx';
@@ -107,6 +109,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={!auth ? <Login /> : <Navigate to="/" />} />
           <Route path="/onboarding" element={auth && auth.workspaces?.length === 0 ? <Welcome /> : <Navigate to="/" />} />
+          <Route path="/checkout" element={<Checkout />} />
           <Route path="/invite/:token" element={<Invite />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -219,6 +222,11 @@ function AppLayout({ auth }) {
                 <BarChart2 size={16} strokeWidth={1.2} /> Воронка
               </NavLink>
             )}
+            {isOwner && (
+              <NavLink to="/billing" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+                <CreditCard size={16} strokeWidth={1.2} /> Биллинг
+              </NavLink>
+            )}
             {/* Settings — в nav чтобы не вываливаться из flex-ряда на мобиле */}
             <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active nav-settings' : 'nav-item nav-settings'}>
               <Settings2 size={16} strokeWidth={1.2} />
@@ -247,6 +255,7 @@ function AppLayout({ auth }) {
             <Route path="/creators" element={canSeeCreators ? <Creators /> : <Navigate to="/" />} />
             <Route path="/creator/:id" element={<CreatorDashboard />} />
             <Route path="/funnel" element={canSeeFunnel ? <Funnel /> : <Navigate to="/" />} />
+            <Route path="/billing" element={isOwner ? <Billing /> : <Navigate to="/" />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
