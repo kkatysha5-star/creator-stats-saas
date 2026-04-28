@@ -4,7 +4,7 @@ import { Pencil, Crown, Film, ClipboardList, Lock, Check, X, Clock } from 'lucid
 import { useAuth } from '../App.jsx';
 import { TUTORIAL_KEY } from '../components/Tutorial.jsx';
 import { api } from '../lib/api.js';
-import { PageHeader, Avatar, Btn, Input, Modal, Loader } from '../components/UI.jsx';
+import { PageHeader, Avatar, Btn, Input, Modal, Loader, showToast } from '../components/UI.jsx';
 import styles from './Settings.module.css';
 
 const PLAN_INFO = {
@@ -37,6 +37,11 @@ export default function Settings() {
   const [copiedId, setCopiedId] = useState(null);
 
   const isPro = workspace?.plan === 'pro';
+
+  // Billing
+  const [billingStatus, setBillingStatus] = useState(null);
+  const [subscribeModal, setSubscribeModal] = useState(null); // planId
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // Настройки видимости для creator роли
   const [visSettings, setVisSettings] = useState({
@@ -113,9 +118,11 @@ export default function Settings() {
     Promise.all([
       api.getMembers(workspace.id),
       isOwner ? api.getInvites(workspace.id) : Promise.resolve([]),
-    ]).then(([m, inv]) => {
+      isOwner ? api.getBillingStatus().catch(() => null) : Promise.resolve(null),
+    ]).then(([m, inv, billing]) => {
       setMembers(m);
       setInvites(inv);
+      if (billing) setBillingStatus(billing);
     }).catch(console.error).finally(() => setLoading(false));
   }, [workspace?.id, isOwner]);
 
@@ -251,7 +258,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Тариф */}
+        {/* Тариф + Биллинг */}
         {workspace && (
           <div className={styles.section} data-tour="billing-section">
             <h2 className={styles.sectionTitle}>Тариф</h2>
@@ -268,7 +275,7 @@ export default function Settings() {
                 </span>
               )}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text3)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 12, color: 'var(--text3)', display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 16 }}>
               <span>Креаторы: до {planInfo.creators}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 Воронка продаж:{' '}
@@ -277,26 +284,88 @@ export default function Settings() {
                   : <X size={12} stroke="rgba(255,255,255,0.3)" strokeWidth={2.5} />}
               </span>
             </div>
-            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Доступные тарифы:</p>
-              {[
-                { key: 'start', label: 'Start', price: '1 990 ₽/мес', desc: '5 креаторов' },
-                { key: 'pro', label: 'Pro', price: '3 990 ₽/мес', desc: '20 креаторов + воронка' },
-              ].map(p => (
-                <div key={p.key} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  background: 'var(--bg3)', borderRadius: 'var(--radius-sm)',
-                  padding: '10px 14px', border: `1px solid ${workspace.plan === p.key ? 'var(--accent)' : 'var(--border)'}`,
-                }}>
-                  <div>
-                    <span style={{ fontWeight: 600, fontSize: 13 }}>{p.label}</span>
-                    <span style={{ color: 'var(--text3)', fontSize: 12, marginLeft: 8 }}>{p.desc}</span>
-                  </div>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>{p.price}</span>
+
+            {/* Активная подписка или карточки тарифов */}
+            {isOwner && (billingStatus?.subscription_active === 1 || billingStatus?.subscription_active === 1n ? (
+              <div style={{ background: 'var(--bg3)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', border: '1px solid rgba(74,222,128,0.25)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                    Тариф «{billingStatus.plan === 'start' ? 'Start' : 'Pro'}» активен
+                  </span>
                 </div>
-              ))}
-            </div>
+                <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
+                  Следующее списание: <strong style={{ color: 'var(--text2)' }}>{billingStatus.next_billing_date || '—'}</strong>
+                </div>
+                <Btn onClick={() => setShowCancelConfirm(true)} style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', fontSize: 12 }} small>
+                  Отменить подписку
+                </Btn>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Подключить тариф:</p>
+                {[
+                  { key: 'start', label: 'Start', price: '1 990 ₽/мес', desc: '5 креаторов' },
+                  { key: 'pro',   label: 'Pro',   price: '3 990 ₽/мес', desc: '20 креаторов + воронка', accent: true },
+                ].map(p => (
+                  <div key={p.key} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: 'var(--bg3)', borderRadius: 'var(--radius-sm)',
+                    padding: '10px 14px', border: `1px solid ${workspace.plan === p.key ? 'var(--accent)' : 'var(--border)'}`,
+                  }}>
+                    <div>
+                      <span style={{ fontWeight: 600, fontSize: 13, color: p.accent ? 'var(--accent)' : 'var(--text)' }}>{p.label}</span>
+                      <span style={{ color: 'var(--text3)', fontSize: 12, marginLeft: 8 }}>{p.desc}</span>
+                      <span style={{ color: 'var(--text3)', fontSize: 12, marginLeft: 8 }}>{p.price}</span>
+                    </div>
+                    <Btn variant={p.accent ? 'primary' : 'ghost'} small onClick={() => setSubscribeModal(p.key)}>
+                      Подключить
+                    </Btn>
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
+        )}
+
+        {/* Модалка подписки */}
+        {subscribeModal && (
+          <SubscribeModal
+            planId={subscribeModal}
+            email={user?.email || ''}
+            onClose={() => setSubscribeModal(null)}
+          />
+        )}
+
+        {/* Подтверждение отмены */}
+        {showCancelConfirm && (
+          <Modal
+            title="Отменить подписку"
+            onClose={() => setShowCancelConfirm(false)}
+            footer={
+              <>
+                <Btn onClick={() => setShowCancelConfirm(false)}>Оставить</Btn>
+                <Btn
+                  variant="primary"
+                  style={{ background: '#ef4444' }}
+                  onClick={async () => {
+                    try {
+                      await api.cancelSubscription();
+                      setBillingStatus(s => ({ ...s, subscription_active: 0 }));
+                      showToast('Подписка отменена');
+                    } catch (e) { showToast(e.message || 'Ошибка'); }
+                    setShowCancelConfirm(false);
+                  }}
+                >
+                  Отменить подписку
+                </Btn>
+              </>
+            }
+          >
+            <p style={{ fontSize: 14, color: 'var(--text2)', margin: 0, lineHeight: 1.6 }}>
+              Подписка будет активна до <strong>{billingStatus?.next_billing_date || '—'}</strong>, затем доступ будет ограничен.
+            </p>
+          </Modal>
         )}
 
         {/* Воркспейс */}
@@ -452,6 +521,72 @@ export default function Settings() {
 
       </div>{/* /layout */}
     </div>
+  );
+}
+
+function SubscribeModal({ planId, email, onClose }) {
+  const planLabel = planId === 'start' ? 'Start' : 'Pro';
+  const [fullName, setFullName] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const canSubmit = fullName.trim() && agreed && !loading;
+
+  const handlePay = async () => {
+    if (!canSubmit) return;
+    setLoading(true); setError('');
+    try {
+      const res = await api.createPayment({ email, fullName: fullName.trim(), planId, agreedToTerms: true });
+      window.location.href = res.confirmationUrl;
+    } catch (e) {
+      setError(e.message || 'Ошибка. Попробуйте ещё раз.');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={`Подключить тариф ${planLabel}`}
+      onClose={onClose}
+      footer={
+        <>
+          <Btn onClick={onClose}>Отмена</Btn>
+          <Btn variant="primary" loading={loading} onClick={handlePay} disabled={!canSubmit}>
+            Перейти к оплате →
+          </Btn>
+        </>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <label style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500 }}>Email</label>
+        <input
+          readOnly value={email}
+          style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text3)', fontSize: 13, fontFamily: 'var(--font)', cursor: 'default', width: '100%', boxSizing: 'border-box' }}
+        />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <label style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500 }}>ФИО</label>
+        <input
+          value={fullName} onChange={e => setFullName(e.target.value)}
+          placeholder="Иванов Иван Иванович" autoFocus
+          style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 8, padding: '9px 12px', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--font)', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+        />
+      </div>
+      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
+        <input
+          type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}
+          style={{ marginTop: 2, accentColor: '#ff6a00', flexShrink: 0 }}
+        />
+        <span style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.5 }}>
+          Я ознакомился и согласен с{' '}
+          <a href="#" style={{ color: 'var(--accent)', textDecoration: 'none' }}>офертой</a>
+          {' '}и{' '}
+          <a href="#" style={{ color: 'var(--accent)', textDecoration: 'none' }}>политикой конфиденциальности</a>
+        </span>
+      </label>
+      {error && <p style={{ color: '#ff5050', fontSize: 12, margin: 0 }}>{error}</p>}
+    </Modal>
   );
 }
 
