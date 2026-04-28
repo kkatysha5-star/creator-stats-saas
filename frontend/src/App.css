@@ -168,7 +168,10 @@ nav { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; }
     flex-direction: row;
     width: 100%;
     gap: 0;
+    flex-grow: 0;
   }
+
+  .nav-settings { margin-top: 0; }
 
   .nav-item {
     flex-direction: column;
