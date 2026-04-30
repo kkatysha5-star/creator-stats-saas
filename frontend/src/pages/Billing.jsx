@@ -58,6 +58,7 @@ export default function Billing() {
         <SubscribeModal
           planId={showModal}
           email={auth?.user?.email || ''}
+          workspaceId={auth?.workspaces?.[0]?.id}
           onClose={() => setShowModal(null)}
         />
       )}
@@ -151,7 +152,7 @@ function PlansView({ onSubscribe }) {
   );
 }
 
-function SubscribeModal({ planId, email, onClose }) {
+function SubscribeModal({ planId, email, workspaceId, onClose }) {
   const planLabel = planId === 'start' ? 'Start' : 'Pro';
   const [fullName, setFullName] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -162,7 +163,7 @@ function SubscribeModal({ planId, email, onClose }) {
     if (!fullName.trim() || !agreed) return;
     setLoading(true); setError('');
     try {
-      const res = await api.createPayment({ email, fullName: fullName.trim(), planId, agreedToTerms: true });
+      const res = await api.createPayment({ email, fullName: fullName.trim(), planId, workspace_id: workspaceId, agreedToTerms: true });
       window.location.href = res.confirmationUrl;
     } catch (e) {
       setError(e.message || 'Ошибка. Попробуйте ещё раз.');

@@ -334,6 +334,7 @@ export default function Settings() {
           <SubscribeModal
             planId={subscribeModal}
             email={user?.email || ''}
+            workspaceId={workspace?.id}
             onClose={() => setSubscribeModal(null)}
           />
         )}
@@ -525,7 +526,7 @@ export default function Settings() {
   );
 }
 
-function SubscribeModal({ planId, email, onClose }) {
+function SubscribeModal({ planId, email, workspaceId, onClose }) {
   const planLabel = planId === 'start' ? 'Start' : 'Pro';
   const [fullName, setFullName] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -538,7 +539,7 @@ function SubscribeModal({ planId, email, onClose }) {
     if (!canSubmit) return;
     setLoading(true); setError('');
     try {
-      const res = await api.createPayment({ email, fullName: fullName.trim(), planId, agreedToTerms: true });
+      const res = await api.createPayment({ email, fullName: fullName.trim(), planId, workspace_id: workspaceId, agreedToTerms: true });
       window.location.href = res.confirmationUrl;
     } catch (e) {
       setError(e.message || 'Ошибка. Попробуйте ещё раз.');

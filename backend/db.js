@@ -208,10 +208,12 @@ export async function initDB() {
       email TEXT,
       full_name TEXT,
       plan_id TEXT,
+      workspace_id TEXT,
       is_existing_user INTEGER,
       created_at TEXT
     )
   `);
+  try { await db.execute('ALTER TABLE pending_payments ADD COLUMN workspace_id TEXT'); } catch {}
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN subscription_active INTEGER DEFAULT 0'); } catch {}
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN payment_method_id TEXT'); } catch {}
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN next_billing_date TEXT'); } catch {}

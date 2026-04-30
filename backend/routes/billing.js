@@ -23,7 +23,7 @@ function nextBillingDate() {
 
 // ─── POST /api/billing/create-payment ────────────────────────────────────────
 router.post('/create-payment', async (req, res) => {
-  const { email, fullName, planId, agreedToTerms } = req.body;
+  const { email, fullName, planId, workspace_id, agreedToTerms } = req.body;
   if (!agreedToTerms) return res.status(400).json({ error: 'Необходимо принять условия оферты' });
   if (!email || !fullName || !planId) return res.status(400).json({ error: 'Заполните все поля' });
   if (!['start', 'pro'].includes(planId)) return res.status(400).json({ error: 'Неверный тариф' });
@@ -31,6 +31,22 @@ router.post('/create-payment', async (req, res) => {
   try {
     const existing = await db.execute({ sql: 'SELECT id FROM users WHERE email = ?', args: [email.toLowerCase()] });
     const isExistingUser = existing.rows.length > 0;
+    const workspaceId = workspace_id ? String(workspace_id) : null;
+    if (workspaceId) {
+      if (!req.user) return res.status(403).json({ error: 'Нет доступа к этому workspace' });
+
+      const access = await db.execute({
+        sql: `SELECT w.id FROM workspaces w
+              LEFT JOIN workspace_members wm ON wm.workspace_id = w.id
+              WHERE w.id = ? AND (w.owner_id = ? OR wm.user_id = ?)
+              LIMIT 1`,
+        args: [workspaceId, req.user.id, req.user.id],
+      });
+      if (!access.rows.length) return res.status(403).json({ error: 'Нет доступа к этому workspace' });
+    }
+
+    const metadata = { email, fullName, planId, isExistingUser: String(isExistingUser) };
+    if (workspaceId) metadata.workspace_id = workspaceId;
 
     const { default: YooKassa } = await import('yookassa');
     const checkout = new YooKassa({
@@ -46,14 +62,14 @@ router.post('/create-payment', async (req, res) => {
         type: 'redirect',
         return_url: 'https://app.cmetrika.com/checkout?status=success',
       },
-      metadata: { email, fullName, planId, isExistingUser: String(isExistingUser) },
+      metadata,
       description: `КонтентМетрика — тариф ${planLabel(planId)}`,
     }, randomUUID());
 
     await db.execute({
-      sql: `INSERT INTO pending_payments (payment_id, email, full_name, plan_id, is_existing_user, created_at)
-            VALUES (?, ?, ?, ?, ?, datetime('now'))`,
-      args: [payment.id, email.toLowerCase(), fullName, planId, isExistingUser ? 1 : 0],
+      sql: `INSERT INTO pending_payments (payment_id, email, full_name, plan_id, workspace_id, is_existing_user, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+      args: [payment.id, email.toLowerCase(), fullName, planId, workspaceId, isExistingUser ? 1 : 0],
     });
 
     res.json({ confirmationUrl: payment.confirmation.confirmation_url });
@@ -69,9 +85,9 @@ export async function billingWebhook(req, res) {
     const { event, object: payment } = req.body;
     res.json({ ok: true }); // ЮКасса ждёт 200 немедленно
 
-    if (event !== 'payment.succeeded') return;
+    if (event !== 'payment.succeeded' || payment.status !== 'succeeded' || payment.paid !== true) return;
 
-    const { email, fullName, planId, isExistingUser } = payment.metadata || {};
+    const { email, fullName, planId, workspace_id, isExistingUser } = payment.metadata || {};
     if (!email || !planId) return;
 
     const paymentMethodId = payment.payment_method?.id;
@@ -121,30 +137,46 @@ export async function billingWebhook(req, res) {
       const user = (await db.execute({ sql: 'SELECT id, name, email FROM users WHERE email = ?', args: [email.toLowerCase()] })).rows[0];
       if (!user) return;
 
-      const wsRow = await db.execute({
-        sql: `SELECT w.id FROM workspaces w
-              WHERE w.owner_id = ?
-              LIMIT 1`,
-        args: [user.id],
-      });
+      if (workspace_id) {
+        const workspace = await db.execute({
+          sql: 'SELECT id FROM workspaces WHERE id = ?',
+          args: [workspace_id],
+        });
+        if (!workspace.rows.length) {
+          console.error('[billing] webhook: workspace not found');
+          return;
+        }
 
-      if (wsRow.rows.length > 0) {
-        const wsId = wsRow.rows[0].id;
         await db.execute({
           sql: `UPDATE workspaces SET plan = ?, subscription_active = 1, payment_method_id = ?, next_billing_date = ? WHERE id = ?`,
-          args: [planId, paymentMethodId || null, nbDate, wsId],
+          args: [planId, paymentMethodId || null, nbDate, workspace_id],
         });
       } else {
-        const wsId = randomUUID();
-        await db.execute({
-          sql: `INSERT INTO workspaces (id, name, slug, owner_id, plan, subscription_active, payment_method_id, next_billing_date)
-                VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-          args: [wsId, `${user.name || fullName} workspace`, `ws-${randomUUID().slice(0, 8)}`, user.id, planId, paymentMethodId || null, nbDate],
+        const wsRow = await db.execute({
+          sql: `SELECT w.id FROM workspaces w
+                WHERE w.owner_id = ?
+                LIMIT 1`,
+          args: [user.id],
         });
-        await db.execute({
-          sql: `INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, 'owner')`,
-          args: [wsId, user.id],
-        });
+
+        if (wsRow.rows.length > 0) {
+          const wsId = wsRow.rows[0].id;
+          await db.execute({
+            sql: `UPDATE workspaces SET plan = ?, subscription_active = 1, payment_method_id = ?, next_billing_date = ? WHERE id = ?`,
+            args: [planId, paymentMethodId || null, nbDate, wsId],
+          });
+        } else {
+          const wsId = randomUUID();
+          await db.execute({
+            sql: `INSERT INTO workspaces (id, name, slug, owner_id, plan, subscription_active, payment_method_id, next_billing_date)
+                  VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+            args: [wsId, `${user.name || fullName} workspace`, `ws-${randomUUID().slice(0, 8)}`, user.id, planId, paymentMethodId || null, nbDate],
+          });
+          await db.execute({
+            sql: `INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, 'owner')`,
+            args: [wsId, user.id],
+          });
+        }
       }
 
       await sendPaymentSuccess(
