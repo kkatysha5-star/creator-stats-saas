@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { acceptInvite } from '../invites.js';
 
 const router = Router();
 
@@ -118,7 +119,7 @@ router.post('/:id/invites', requireAuth, requireRole(['owner', 'manager']), asyn
 
     const inviteId = Number(result.lastInsertRowid);
     const inviteUrl = `${process.env.FRONTEND_URL}/invite/${token}`;
-    res.status(201).json({ id: inviteId, token, url: inviteUrl, expires_at: expiresAt, role, label: label || null });
+    res.status(201).json({ id: inviteId, workspace_id: req.params.id, token, url: inviteUrl, expires_at: expiresAt, role, label: label || null });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -163,40 +164,12 @@ router.put('/:id/settings', requireAuth, requireRole(['owner']), async (req, res
 // Принять инвайт (многоразовый — не помечаем как использованный)
 router.post('/join/:token', requireAuth, async (req, res) => {
   try {
-    const inviteResult = await db.execute({
-      sql: 'SELECT * FROM invites WHERE token = ?',
-      args: [req.params.token]
-    });
-    if (!inviteResult.rows.length) return res.status(404).json({ error: 'Инвайт не найден' });
+    const invite = await acceptInvite(req.params.token, req.user);
+    if (!invite) return res.status(404).json({ error: 'Инвайт не найден' });
 
-    const invite = inviteResult.rows[0];
-
-    if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-      return res.status(410).json({ error: 'Ссылка-приглашение устарела' });
-    }
-
-    // Добавляем пользователя в воркспейс
-    const existing = await db.execute({
-      sql: 'SELECT id FROM workspace_members WHERE workspace_id = ? AND user_id = ?',
-      args: [invite.workspace_id, req.user.id]
-    });
-
-    if (!existing.rows.length) {
-      await db.execute({
-        sql: 'INSERT INTO workspace_members (workspace_id, user_id, role, invite_id) VALUES (?, ?, ?, ?)',
-        args: [invite.workspace_id, req.user.id, invite.role, invite.id]
-      });
-
-      // Увеличиваем счётчик использований
-      await db.execute({
-        sql: 'UPDATE invites SET use_count = use_count + 1 WHERE id = ?',
-        args: [invite.id]
-      });
-    }
-
-    res.json({ ok: true, workspace_id: invite.workspace_id });
+    res.json({ ok: true, workspace_id: invite.workspace_id, role: invite.role });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

@@ -58,7 +58,7 @@ function CreatorLimitModal({ plan, limit, onClose }) {
   );
 }
 
-export default function Creators() {
+export default function Creators({ startNew = false }) {
   const { auth } = useAuth();
   const workspace = auth?.workspaces?.[0];
   const plan = workspace?.plan || 'trial';
@@ -92,6 +92,9 @@ export default function Creators() {
   };
 
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (startNew && role === 'creator') setShowAdd(true);
+  }, [startNew, role]);
 
   const handleDelete = async (id) => {
     if (!confirm('Удалить креатора и все его видео?')) return;
@@ -260,8 +263,11 @@ function InviteModal({ creator, inviteUrl, onClose }) {
 }
 
 function CreatorModal({ title, initial, colors, onClose, onSaved }) {
-  const [name, setName] = useState(initial?.name || '');
-  const [email, setEmail] = useState(initial?.email || '');
+  const { auth } = useAuth();
+  const role = auth?.workspaces?.[0]?.role;
+  const isCreatorSelfCreate = !initial && role === 'creator';
+  const [name, setName] = useState(initial?.name || (isCreatorSelfCreate ? auth?.user?.name || '' : ''));
+  const [email, setEmail] = useState(initial?.email || (isCreatorSelfCreate ? auth?.user?.email || '' : ''));
   const [username, setUsername] = useState(initial?.username || '');
   const [color, setColor] = useState(initial?.avatar_color || colors[0]);
   const [videoPlanCount, setVideoPlanCount] = useState(initial?.video_plan_count || '');

@@ -445,6 +445,7 @@ export function useTutorial(role) {
   const [show, setShow] = useState(false);
   useEffect(() => {
     if (!role) return;
+    if (role === 'creator') return;
     if (!localStorage.getItem(TUTORIAL_KEY)) setShow(true);
   }, [role]);
   return [show, () => setShow(false)];

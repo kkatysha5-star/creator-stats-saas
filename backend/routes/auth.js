@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import bcrypt from 'bcrypt';
 import { db } from '../db.js';
 import { sendVerifyEmail, sendWelcome, sendPasswordReset } from '../email.js';
+import { acceptInvite } from '../invites.js';
 
 const router = Router();
 
@@ -47,6 +48,18 @@ router.post('/register', async (req, res) => {
   if (password.length < 6) return res.status(400).json({ error: 'Пароль — минимум 6 символов' });
 
   try {
+    if (req.body.inviteToken) {
+      const inviteCheck = await db.execute({
+        sql: 'SELECT id, expires_at FROM invites WHERE token = ?',
+        args: [req.body.inviteToken],
+      });
+      if (!inviteCheck.rows.length) return res.status(404).json({ error: 'Инвайт не найден' });
+      const invite = inviteCheck.rows[0];
+      if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+        return res.status(410).json({ error: 'Ссылка-приглашение устарела' });
+      }
+    }
+
     const existing = await db.execute({ sql: 'SELECT id FROM users WHERE email = ?', args: [email.trim().toLowerCase()] });
     if (existing.rows.length) return res.status(409).json({ error: 'Email уже зарегистрирован' });
 
@@ -59,63 +72,25 @@ router.post('/register', async (req, res) => {
     });
     const userId = Number(result.lastInsertRowid);
 
-    // Воркспейс trial 7 дней
-    const slug = name.trim().toLowerCase().replace(/[^a-z0-9\s]/gi, '').replace(/\s+/g, '-').slice(0, 30) + '-' + Date.now().toString().slice(-4);
-    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    const wsResult = await db.execute({
-      sql: 'INSERT INTO workspaces (name, slug, owner_id, plan, trial_ends_at) VALUES (?, ?, ?, ?, ?)',
-      args: [`КЗ ${name.trim()}`, slug, userId, 'trial', trialEndsAt]
-    });
-    const wsId = Number(wsResult.lastInsertRowid);
-    await db.execute({
-      sql: 'INSERT INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, ?)',
-      args: [wsId, userId, 'owner']
-    });
-
     const userRow = await db.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [userId] });
     const user = userRow.rows[0];
 
-    // Присоединение к воркспейсу по инвайту (если есть)
+    let acceptedInvite = null;
     if (req.body.inviteToken) {
-      const inviteResult = await db.execute({
-        sql: 'SELECT * FROM invites WHERE token = ?',
-        args: [req.body.inviteToken]
-      }).catch(() => ({ rows: [] }));
-
-      if (inviteResult.rows.length) {
-        const invite = inviteResult.rows[0];
-        const notExpired = !invite.expires_at || new Date(invite.expires_at) > new Date();
-
-        if (notExpired) {
-          // 1. Добавляем в воркспейс — простой INSERT без invite_id (надёжнее)
-          await db.execute({
-            sql: 'INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, ?)',
-            args: [invite.workspace_id, userId, invite.role]
-          });
-
-          // 2. Проставляем invite_id отдельно (необязательно, не критично)
-          db.execute({
-            sql: 'UPDATE workspace_members SET invite_id = ? WHERE workspace_id = ? AND user_id = ?',
-            args: [invite.id, invite.workspace_id, userId]
-          }).catch(() => {});
-
-          // 3. Инкрементируем счётчик
-          await db.execute({
-            sql: 'UPDATE invites SET use_count = use_count + 1 WHERE id = ?',
-            args: [invite.id]
-          });
-
-          // 4. Удаляем автоматически созданный личный воркспейс
-          await db.execute({
-            sql: 'DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?',
-            args: [wsId, userId]
-          });
-          await db.execute({
-            sql: 'DELETE FROM workspaces WHERE id = ? AND owner_id = ?',
-            args: [wsId, userId]
-          });
-        }
-      }
+      acceptedInvite = await acceptInvite(req.body.inviteToken, user);
+      if (!acceptedInvite) return res.status(404).json({ error: 'Инвайт не найден' });
+    } else {
+      const slug = name.trim().toLowerCase().replace(/[^a-z0-9\s]/gi, '').replace(/\s+/g, '-').slice(0, 30) + '-' + Date.now().toString().slice(-4);
+      const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const wsResult = await db.execute({
+        sql: 'INSERT INTO workspaces (name, slug, owner_id, plan, trial_ends_at) VALUES (?, ?, ?, ?, ?)',
+        args: [`КЗ ${name.trim()}`, slug, userId, 'trial', trialEndsAt]
+      });
+      const wsId = Number(wsResult.lastInsertRowid);
+      await db.execute({
+        sql: 'INSERT INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, ?)',
+        args: [wsId, userId, 'owner']
+      });
     }
 
     // Письма (не блокируем регистрацию если упадут)
@@ -127,7 +102,11 @@ router.post('/register', async (req, res) => {
 
     req.login(user, (err) => {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ ok: true });
+      res.json({
+        ok: true,
+        workspace_id: acceptedInvite?.workspace_id,
+        role: acceptedInvite?.role,
+      });
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

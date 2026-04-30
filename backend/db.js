@@ -105,6 +105,7 @@ export async function initDB() {
   try { await db.execute('ALTER TABLE creators ADD COLUMN reach_plan INTEGER DEFAULT 0'); } catch {}
   try { await db.execute('ALTER TABLE creators ADD COLUMN daily_rate INTEGER DEFAULT 0'); } catch {}
   try { await db.execute('ALTER TABLE creators ADD COLUMN email TEXT'); } catch {}
+  try { await db.execute('ALTER TABLE creators ADD COLUMN user_id INTEGER'); } catch {}
 
   // Таблица пользователей
   await db.execute(`

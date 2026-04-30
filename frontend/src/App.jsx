@@ -190,6 +190,7 @@ function AppLayout({ auth }) {
   const canSeeCreators = isManager
     || !!workspace?.creator_sees_all_creators
     || !!workspace?.creator_sees_own_only;
+  const canCreateOwnCreator = role === 'creator';
 
   return (
     <div className="app-layout">
@@ -247,6 +248,7 @@ function AppLayout({ auth }) {
             <Route path="/posts" element={<Posts />} />
             <Route path="/videos" element={<Videos />} />
             <Route path="/creators" element={canSeeCreators ? <Creators /> : <Navigate to="/" />} />
+            <Route path="/creators/new" element={(canSeeCreators || canCreateOwnCreator) ? <Creators startNew /> : <Navigate to="/" />} />
             <Route path="/creator/:id" element={<CreatorDashboard />} />
             <Route path="/funnel" element={canSeeFunnel ? <Funnel /> : <Navigate to="/" />} />
             <Route path="/settings" element={<Settings />} />
@@ -257,4 +259,3 @@ function AppLayout({ auth }) {
     </div>
   );
 }
-

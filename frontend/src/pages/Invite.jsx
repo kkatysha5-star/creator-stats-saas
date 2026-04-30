@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { api } from '../lib/api.js';
+import { finishAuth } from '../lib/authFlow.js';
 import styles from './Login.module.css';
 
 export default function Invite() {
@@ -22,14 +23,7 @@ export default function Invite() {
 
     if (auth) {
       setJoining(true);
-      api.joinWorkspace(token)
-        .then(() => api.getMe())
-        .then(data => {
-          if (data?.workspaces?.length > 0) api.setWorkspace(data.workspaces[0].id);
-          setAuth(data);
-          localStorage.removeItem('pendingInviteToken');
-          navigate('/');
-        })
+      finishAuth(setAuth, navigate, token)
         .catch(() => {
           localStorage.removeItem('pendingInviteToken');
           navigate('/');
@@ -55,17 +49,15 @@ export default function Invite() {
     setLoading(true);
     try {
       const inviteToken = localStorage.getItem('pendingInviteToken');
+      let registeredWorkspaceId = null;
       if (tab === 'register') {
-        await api.register({ name, email, password, inviteToken });
+        const registered = await api.register({ name, email, password, inviteToken });
+        registeredWorkspaceId = registered?.workspace_id;
+        if (inviteToken) localStorage.removeItem('pendingInviteToken');
       } else {
         await api.emailLogin({ email, password });
-        if (inviteToken) await api.joinWorkspace(inviteToken).catch(() => {});
       }
-      if (inviteToken) localStorage.removeItem('pendingInviteToken');
-      const data = await api.getMe();
-      if (data?.workspaces?.length > 0) api.setWorkspace(data.workspaces[0].id);
-      setAuth(data);
-      navigate('/');
+      await finishAuth(setAuth, navigate, tab === 'register' ? null : inviteToken, registeredWorkspaceId);
     } catch (e) {
       setError(e.message);
     } finally {

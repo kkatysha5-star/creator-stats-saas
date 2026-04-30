@@ -56,6 +56,7 @@ export const api = {
 
   // Creators
   getCreators: () => req('GET', '/creators'),
+  getMyCreator: () => req('GET', '/creators/me'),
   createCreator: (body) => req('POST', '/creators', body),
   updateCreator: (id, body) => req('PUT', `/creators/${id}`, body),
   deleteCreator: (id) => req('DELETE', `/creators/${id}`),

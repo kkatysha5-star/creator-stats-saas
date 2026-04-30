@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { api } from '../lib/api.js';
+import { finishAuth } from '../lib/authFlow.js';
 import styles from './Login.module.css';
 
 export default function Login() {
@@ -38,17 +39,16 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
+      const pendingInviteToken = localStorage.getItem('pendingInviteToken') || undefined;
+      let registeredWorkspaceId = null;
       if (tab === 'register') {
-        const inviteToken = localStorage.getItem('pendingInviteToken') || undefined;
-        await api.register({ name, email, password, inviteToken });
-        if (inviteToken) localStorage.removeItem('pendingInviteToken');
+        const registered = await api.register({ name, email, password, inviteToken: pendingInviteToken });
+        registeredWorkspaceId = registered?.workspace_id;
+        if (pendingInviteToken) localStorage.removeItem('pendingInviteToken');
       } else {
         await api.emailLogin({ email, password });
       }
-      const data = await api.getMe();
-      if (data?.workspaces?.length > 0) api.setWorkspace(data.workspaces[0].id);
-      setAuth(data);
-      navigate(data?.workspaces?.length > 0 ? '/' : '/onboarding');
+      await finishAuth(setAuth, navigate, tab === 'login' ? pendingInviteToken : null, registeredWorkspaceId);
     } catch (e) {
       setError(e.message);
     } finally {
