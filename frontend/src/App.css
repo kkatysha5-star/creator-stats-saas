@@ -33,6 +33,22 @@
   letter-spacing: -0.3px;
 }
 
+.sidebar-logo-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-workspace-name {
+  margin-top: 1px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 nav { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; }
 
 .nav-settings { margin-top: auto; }

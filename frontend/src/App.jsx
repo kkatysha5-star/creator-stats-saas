@@ -213,7 +213,10 @@ function AppLayout({ auth }) {
         <aside className="sidebar">
           <div className="sidebar-logo">
             <div style={{background:'#ff6a00',borderRadius:'10px',width:'40px',height:'40px',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontWeight:700,fontSize:'16px'}}>КМ</div>
-            <span>КонтентМетрика</span>
+            <div className="sidebar-logo-text">
+              <span>КонтентМетрика</span>
+              <span className="sidebar-workspace-name">{workspace?.name || 'Workspace'}</span>
+            </div>
           </div>
           <nav>
             <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
@@ -235,19 +238,17 @@ function AppLayout({ auth }) {
                 <BarChart2 size={16} strokeWidth={1.2} /> Воронка
               </NavLink>
             )}
-            {role !== 'creator' && (
-              <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active nav-settings' : 'nav-item nav-settings'}>
-                <Settings2 size={16} strokeWidth={1.2} />
-                <div style={{ overflow: 'hidden', flex: 1 }} className="nav-settings-label">
-                  <div style={{ fontSize: 12, fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{auth?.user?.name}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 400 }}>Настройки</div>
-                </div>
-                {auth?.user?.avatar && (
-                  <img src={auth.user.avatar} style={{ width: 22, height: 22, borderRadius: '50%', marginLeft: 'auto', flexShrink: 0 }} className="nav-settings-avatar" alt="" />
-                )}
-                <span className="nav-settings-mobile-label">Настройки</span>
-              </NavLink>
-            )}
+            <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active nav-settings' : 'nav-item nav-settings'}>
+              <Settings2 size={16} strokeWidth={1.2} />
+              <div style={{ overflow: 'hidden', flex: 1 }} className="nav-settings-label">
+                <div style={{ fontSize: 12, fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{auth?.user?.name}</div>
+                <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 400 }}>Настройки</div>
+              </div>
+              {auth?.user?.avatar && (
+                <img src={auth.user.avatar} style={{ width: 22, height: 22, borderRadius: '50%', marginLeft: 'auto', flexShrink: 0 }} className="nav-settings-avatar" alt="" />
+              )}
+              <span className="nav-settings-mobile-label">Настройки</span>
+            </NavLink>
           </nav>
 
           <div className="sidebar-bottom">
@@ -265,56 +266,11 @@ function AppLayout({ auth }) {
             <Route path="/creators/new" element={(canSeeCreators || canCreateOwnCreator) ? <Creators startNew /> : <Navigate to="/" />} />
             <Route path="/creator/:id" element={<CreatorDashboard />} />
             <Route path="/funnel" element={canSeeFunnel ? <Funnel /> : <Navigate to="/" />} />
-            <Route path="/settings" element={role === 'creator' ? <CreatorSettingsBlocked /> : <Settings />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
       </div>
-    </div>
-  );
-}
-
-function CreatorSettingsBlocked() {
-  const { auth } = useAuth();
-  const handleLogout = async () => {
-    await api.logout();
-    api.setWorkspace(null);
-    window.location.href = '/login';
-  };
-
-  return (
-    <div style={{ padding: '0 0 56px' }}>
-      <PageHeaderShim title="Настройки" subtitle="Этот раздел доступен владельцу workspace" />
-      <div style={{ padding: '0 28px' }}>
-        <div style={{
-          maxWidth: 520,
-          background: 'var(--card-bg)',
-          border: '1px solid var(--card-border)',
-          borderTop: '1px solid var(--card-border-top)',
-          borderRadius: 'var(--radius)',
-          padding: 22,
-        }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
-            Настройки доступны владельцу
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>
-            Вы вошли как креатор в workspace команды. Тариф, команда и платежи скрыты.
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>{auth?.user?.email}</div>
-          <button onClick={handleLogout} className="theme-toggle" style={{ width: 'auto', padding: '0 14px' }}>
-            Выйти из аккаунта
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PageHeaderShim({ title, subtitle }) {
-  return (
-    <div style={{ padding: '22px 28px 18px' }}>
-      <h1 style={{ margin: 0, fontSize: 22, color: 'var(--text)' }}>{title}</h1>
-      <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text3)' }}>{subtitle}</p>
     </div>
   );
 }

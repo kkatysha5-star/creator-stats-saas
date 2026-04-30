@@ -123,7 +123,7 @@ export default function Creators({ startNew = false }) {
 
   if (isCreatorNewPage) {
     return (
-      <div className={styles.page}>
+      <div className={styles.page + ' ' + styles.selfCreatePage}>
         <PageHeader
           title="Создайте свою карточку креатора"
           subtitle="Эта карточка привяжется к вашему аккаунту в текущем workspace"
@@ -341,7 +341,7 @@ function CreatorForm({ initial, colors, onCancel, onSaved, submitLabel = 'Сох
   };
 
   return (
-    <>
+    <div className={styles.creatorForm}>
       <Input label="Имя" placeholder="Анна К." value={name} onChange={e => setName(e.target.value)} />
       <Input label="Email (для приглашения)" placeholder="anna@example.com" type="email" value={email} onChange={e => setEmail(e.target.value)} />
       <Input label="Username (необязательно)" placeholder="@username" value={username} onChange={e => setUsername(e.target.value)} />
@@ -382,6 +382,6 @@ function CreatorForm({ initial, colors, onCancel, onSaved, submitLabel = 'Сох
         <Btn onClick={onCancel}>Отмена</Btn>
         <Btn variant="primary" onClick={handleSave} loading={loading}>{submitLabel}</Btn>
       </div>
-    </>
+    </div>
   );
 }

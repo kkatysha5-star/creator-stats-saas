@@ -26,7 +26,9 @@ export default function Settings() {
   const navigate = useNavigate();
   const workspace = auth?.workspaces?.[0];
   const user = auth?.user;
+  const role = workspace?.role;
   const isOwner = workspace?.role === 'owner';
+  const isCreator = role === 'creator';
 
   const [members, setMembers] = useState([]);
   const [invites, setInvites] = useState([]);
@@ -74,6 +76,8 @@ export default function Settings() {
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.name || '');
   const [savingName, setSavingName] = useState(false);
+  const [workspaceName, setWorkspaceName] = useState(workspace?.name || '');
+  const [savingWorkspaceName, setSavingWorkspaceName] = useState(false);
 
   const handleSaveName = async () => {
     if (!newName.trim()) return;
@@ -86,6 +90,35 @@ export default function Settings() {
       alert(e.message);
     } finally {
       setSavingName(false);
+    }
+  };
+
+  useEffect(() => {
+    setWorkspaceName(workspace?.name || '');
+  }, [workspace?.id, workspace?.name]);
+
+  const handleSaveWorkspaceName = async () => {
+    if (!workspaceName.trim()) return;
+    setSavingWorkspaceName(true);
+    try {
+      const updated = await api.updateWorkspaceSettings(workspace.id, {
+        name: workspaceName.trim(),
+        creator_sees_all_creators: workspace?.creator_sees_all_creators !== 0,
+        creator_sees_funnel: !!workspace?.creator_sees_funnel,
+        creator_sees_own_only: !!workspace?.creator_sees_own_only,
+      });
+      if (updated?.workspace) {
+        setAuth(prev => ({
+          ...prev,
+          workspaces: prev.workspaces.map(w =>
+            w.id === workspace.id ? { ...w, ...updated.workspace } : w
+          ),
+        }));
+      }
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setSavingWorkspaceName(false);
     }
   };
 
@@ -167,6 +200,43 @@ export default function Settings() {
   const plan = workspace?.plan || 'trial';
   const planInfo = PLAN_INFO[plan] || PLAN_INFO.trial;
   const daysLeft = trialDaysLeft(workspace);
+
+  if (isCreator) {
+    return (
+      <div className={styles.page}>
+        <PageHeader title="Настройки" subtitle="Профиль и интерфейс" />
+
+        <div className={styles.layout}>
+          <div className={styles.leftCol}>
+            <div className={styles.section} data-tour="profile-section">
+              <h2 className={styles.sectionTitle}>Профиль</h2>
+              <div className={styles.profileRow}>
+                {user?.avatar
+                  ? <img src={user.avatar} className={styles.avatar} alt={user.name} />
+                  : <Avatar name={user?.name || '?'} color="var(--accent)" size={48} />
+                }
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <div className={styles.profileName}>{user?.name}</div>
+                  </div>
+                  <div className={styles.profileEmail}>{user?.email}</div>
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 2 }}>Контент-завод</div>
+                    <div style={{ fontSize: 13, color: 'var(--text2)', fontWeight: 500, lineHeight: 1.35, maxWidth: '100%', wordBreak: 'break-word' }}>
+                      {workspace?.name || 'Без названия'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                <Btn onClick={handleLogout}>Выйти из аккаунта</Btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
@@ -256,6 +326,21 @@ export default function Settings() {
               window.location.reload();
             }}>
               📖 Показать обучение снова
+            </Btn>
+          </div>
+        </div>
+
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Контент-завод</h2>
+          <Input
+            label="Название контент-завода"
+            placeholder="Например: КЗ Анастасии"
+            value={workspaceName}
+            onChange={e => setWorkspaceName(e.target.value)}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Btn variant="primary" onClick={handleSaveWorkspaceName} loading={savingWorkspaceName}>
+              Сохранить название
             </Btn>
           </div>
         </div>
