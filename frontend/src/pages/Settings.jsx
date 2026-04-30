@@ -4,6 +4,7 @@ import { Pencil, Crown, Film, ClipboardList, Lock, Check, X, Clock } from 'lucid
 import { useAuth } from '../App.jsx';
 import { TUTORIAL_KEY } from '../components/Tutorial.jsx';
 import { api } from '../lib/api.js';
+import { fmtDate } from '../lib/utils.js';
 import { PageHeader, Avatar, Btn, Input, Modal, Loader, showToast } from '../components/UI.jsx';
 import styles from './Settings.module.css';
 
@@ -295,7 +296,7 @@ export default function Settings() {
                   </span>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
-                  Следующее списание: <strong style={{ color: 'var(--text2)' }}>{billingStatus.next_billing_date || '—'}</strong>
+                  Следующее списание: <strong style={{ color: 'var(--text2)', fontWeight: 700 }}>{fmtDate(billingStatus.next_billing_date)}</strong>
                 </div>
                 <Btn onClick={() => setShowCancelConfirm(true)} style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)', fontSize: 12 }} small>
                   Отменить подписку
@@ -363,7 +364,7 @@ export default function Settings() {
             }
           >
             <p style={{ fontSize: 14, color: 'var(--text2)', margin: 0, lineHeight: 1.6 }}>
-              Подписка будет активна до <strong>{billingStatus?.next_billing_date || '—'}</strong>, затем доступ будет ограничен.
+              Подписка будет активна до <strong style={{ fontWeight: 700 }}>{fmtDate(billingStatus?.next_billing_date)}</strong>, затем доступ будет ограничен.
             </p>
           </Modal>
         )}

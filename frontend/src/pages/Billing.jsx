@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../App.jsx';
 import { Btn, Modal, Loader } from '../components/UI.jsx';
+import { fmtDate } from '../lib/utils.js';
 
 const PLANS = [
   {
@@ -75,7 +76,7 @@ export default function Billing() {
           }
         >
           <p style={{ fontSize: 14, color: 'var(--text2)', margin: 0, lineHeight: 1.6 }}>
-            Вы уверены? Подписка будет активна до <strong>{status?.next_billing_date || '—'}</strong>, после чего доступ будет ограничен.
+            Вы уверены? Подписка будет активна до <strong style={{ fontWeight: 700 }}>{fmtDate(status?.next_billing_date)}</strong>, после чего доступ будет ограничен.
           </p>
         </Modal>
       )}
@@ -101,7 +102,7 @@ function ActiveView({ status, onCancel }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
           <Row label="Тариф" value={planName} />
           <Row label="Сумма" value={`${amount} ₽/мес`} />
-          <Row label="Следующее списание" value={status?.next_billing_date || '—'} />
+          <Row label="Следующее списание" value={<strong style={{ fontWeight: 700 }}>{fmtDate(status?.next_billing_date)}</strong>} />
         </div>
         <Btn onClick={onCancel} style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}>
           Отменить подписку

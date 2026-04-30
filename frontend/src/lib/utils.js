@@ -8,6 +8,13 @@ export function fmtEr(er) {
   return parseFloat(er).toFixed(2) + '%';
 }
 
+export function fmtDate(date) {
+  if (!date) return '—';
+  const d = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return date;
+  return d.toLocaleDateString('ru-RU');
+}
+
 export function platformMeta(platform) {
   return {
     youtube:   { label: 'YouTube',   color: '#ff4444', short: 'YT' },
