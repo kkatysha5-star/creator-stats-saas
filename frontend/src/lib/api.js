@@ -90,6 +90,8 @@ export const api = {
   // Funnel
   getFunnelPeriods: () => req('GET', '/funnel/periods'),
   getFunnelPrivate: () => req('GET', '/funnel/periods/private'),
+  syncFunnelLabel: (body) => req('POST', '/funnel/periods/sync', body),
+  addFunnelCreator: (body) => req('POST', '/funnel/periods/add-creator', body),
   createFunnelPeriod: (body) => req('POST', '/funnel/periods', body),
   updateFunnelPeriod: (id, body) => req('PUT', `/funnel/periods/${id}`, body),
   deleteFunnelPeriod: (id) => req('DELETE', `/funnel/periods/${id}`),

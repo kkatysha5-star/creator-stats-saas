@@ -86,12 +86,20 @@ function FunnelInner() {
   const [showNewPeriod, setShowNewPeriod] = useState(false);
   const [showSnapshot, setShowSnapshot] = useState(null);
   const [showEdit, setShowEdit] = useState(null);
+  const [showAddCreator, setShowAddCreator] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState('');
   const [compareTo, setCompareTo] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      if (canEdit && selectedLabel) {
+        try {
+          await api.syncFunnelLabel({ label: selectedLabel });
+        } catch (e) {
+          console.error(e);
+        }
+      }
       const [ps, crs] = await Promise.all([api.getFunnelPeriods(), api.getCreators()]);
       setPeriods(ps);
       setCreators(crs);
@@ -105,7 +113,7 @@ function FunnelInner() {
       }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [canEdit]);
+  }, [canEdit, selectedLabel]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -141,6 +149,9 @@ function FunnelInner() {
     comparePeriods.forEach(p => { m[p.creator_id] = p; });
     return m;
   }, [comparePeriods]);
+
+  const currentCreatorIds = useMemo(() => new Set(currentPeriods.map(p => String(p.creator_id))), [currentPeriods]);
+  const availableCreators = useMemo(() => creators.filter(c => !currentCreatorIds.has(String(c.id))), [creators, currentCreatorIds]);
 
   const COLS = [
     { key: 'total_views',       label: 'Охват',        fmt: fmtNum },
@@ -269,6 +280,24 @@ function FunnelInner() {
                 })}
               </tbody>
             </table>
+            {canEdit && (
+              <div className={styles.tableFooter}>
+                {availableCreators.length > 0 ? (
+                  <>
+                    <div className={styles.tableFooterText}>
+                      В этом периоде ещё не все креаторы добавлены.
+                    </div>
+                    <Btn small variant="primary" onClick={() => setShowAddCreator(true)}>
+                      + Добавить креатора
+                    </Btn>
+                  </>
+                ) : (
+                  <div className={styles.tableFooterText}>
+                    Все креаторы уже добавлены
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )
       }
@@ -291,6 +320,15 @@ function FunnelInner() {
       {showNewPeriod && <NewPeriodModal creators={creators} onClose={() => setShowNewPeriod(false)} onSaved={() => { setShowNewPeriod(false); load(); }} />}
       {showSnapshot && <SnapshotModal period={showSnapshot} onClose={() => setShowSnapshot(null)} onSaved={() => { setShowSnapshot(null); load(); }} />}
       {showEdit && <EditPeriodModal period={showEdit} onClose={() => setShowEdit(null)} onSaved={() => { setShowEdit(null); load(); }} />}
+      {showAddCreator && (
+        <AddCreatorModal
+          creators={availableCreators}
+          label={selectedLabel}
+          period={currentPeriods[0]}
+          onClose={() => setShowAddCreator(false)}
+          onSaved={() => { setShowAddCreator(false); load(); }}
+        />
+      )}
     </div>
   );
 }
@@ -770,6 +808,53 @@ function EditPeriodModal({ period, onClose, onSaved }) {
         Активный период
       </label>
       {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
+    </Modal>
+  );
+}
+
+function AddCreatorModal({ creators, label, period, onClose, onSaved }) {
+  const [creatorId, setCreatorId] = useState(creators[0]?.id || '');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setCreatorId(creators[0]?.id || '');
+  }, [creators]);
+
+  const handleSave = async () => {
+    if (!creatorId) return setError('Выберите креатора');
+    if (!period) return setError('Не найден шаблон периода');
+    setLoading(true);
+    setError('');
+    try {
+      await api.addFunnelCreator({
+        creator_id: parseInt(creatorId),
+        label,
+        date_from: period.date_from,
+        date_to: period.date_to || undefined,
+      });
+      onSaved();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Добавить креатора в период"
+      onClose={onClose}
+      width={420}
+      footer={<><Btn onClick={onClose}>Отмена</Btn><Btn variant="primary" onClick={handleSave} loading={loading}>Добавить</Btn></>}
+    >
+      <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
+        Период: <span style={{ color: 'var(--text2)', fontWeight: 600 }}>{label}</span>
+      </p>
+      <Select label="Креатор" value={creatorId} onChange={e => setCreatorId(e.target.value)}>
+        {creators.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </Select>
+      {error && <p style={{ color: '#ff5050', fontSize: 12, marginTop: 8 }}>{error}</p>}
     </Modal>
   );
 }

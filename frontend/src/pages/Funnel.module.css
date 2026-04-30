@@ -154,6 +154,22 @@
 .del:hover { background: rgba(255,80,80,0.08) !important; color: #ff5050 !important; border-color: rgba(255,80,80,.3) !important; }
 .tiny { width: 20px; height: 20px; font-size: 11px; }
 
+.tableFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.tableFooterText {
+  font-size: 12px;
+  color: var(--text3);
+  line-height: 1.4;
+}
+
 /* История */
 .historySection {
   margin: 24px 28px 0;
@@ -214,4 +230,11 @@
   .tableWrap { margin: 0 16px; }
   .historySection { margin: 20px 16px 0; }
   .thCreator { min-width: 140px; }
+  .tableFooter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tableFooter > button {
+    width: 100%;
+  }
 }

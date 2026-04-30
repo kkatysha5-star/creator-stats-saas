@@ -8,6 +8,69 @@ function canEdit(req) {
   return req.userRole === 'owner' || req.userRole === 'manager';
 }
 
+async function getWorkspaceCreators(wsId) {
+  const result = await db.execute({
+    sql: 'SELECT id, name FROM creators WHERE workspace_id = ? ORDER BY name',
+    args: [wsId],
+  });
+  return result.rows;
+}
+
+async function getLabelTemplate(wsId, label) {
+  const result = await db.execute({
+    sql: `SELECT date_from, date_to, is_active
+          FROM funnel_periods
+          WHERE workspace_id = ? AND label = ?
+          ORDER BY date_from ASC, creator_id ASC
+          LIMIT 1`,
+    args: [wsId, label],
+  });
+  return result.rows[0] || null;
+}
+
+async function ensureFunnelPeriod({ wsId, creatorId, label, dateFrom, dateTo, isActive = 1 }) {
+  const existing = await db.execute({
+    sql: 'SELECT id FROM funnel_periods WHERE workspace_id = ? AND creator_id = ? AND label = ?',
+    args: [wsId, creatorId, label],
+  });
+  if (existing.rows.length) {
+    return { id: Number(existing.rows[0].id), created: false };
+  }
+
+  const insert = await db.execute({
+    sql: 'INSERT INTO funnel_periods (creator_id, label, date_from, date_to, is_active, workspace_id) VALUES (?, ?, ?, ?, ?, ?)',
+    args: [creatorId, label, dateFrom, dateTo || null, isActive ? 1 : 0, wsId],
+  });
+  return { id: Number(insert.lastInsertRowid), created: true };
+}
+
+async function syncFunnelLabel(wsId, label) {
+  if (!label) return { created: 0, skipped: 0 };
+
+  const [creators, template] = await Promise.all([
+    getWorkspaceCreators(wsId),
+    getLabelTemplate(wsId, label),
+  ]);
+
+  if (!template) return { created: 0, skipped: creators.length };
+
+  let created = 0;
+  let skipped = 0;
+  for (const creator of creators) {
+    const result = await ensureFunnelPeriod({
+      wsId,
+      creatorId: creator.id,
+      label,
+      dateFrom: template.date_from,
+      dateTo: template.date_to,
+      isActive: template.is_active,
+    });
+    if (result.created) created += 1;
+    else skipped += 1;
+  }
+  return { created, skipped };
+}
+
 // Проверяет что у залогиненного пользователя есть доступ к воронке по плану
 function requireFunnelPlan(req, res, next) {
   const workspace = req.workspace;
@@ -88,6 +151,46 @@ router.get('/periods', async (req, res) => {
     }));
 
     res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Синхронизировать выбранный период с текущими креаторами workspace
+router.post('/periods/sync', async (req, res) => {
+  if (!canEdit(req)) return res.status(403).json({ error: 'Forbidden' });
+  try {
+    const { label } = req.body;
+    const result = await syncFunnelLabel(req.workspaceId, label);
+    res.json({ ok: true, ...result });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Ручное добавление креатора в выбранный период
+router.post('/periods/add-creator', async (req, res) => {
+  if (!canEdit(req)) return res.status(403).json({ error: 'Forbidden' });
+  try {
+    const { creator_id, label, date_from, date_to } = req.body;
+    if (!creator_id || !label || !date_from) {
+      return res.status(400).json({ error: 'Заполните все поля' });
+    }
+
+    const creatorCheck = await db.execute({
+      sql: 'SELECT id FROM creators WHERE id = ? AND workspace_id = ?',
+      args: [creator_id, req.workspaceId],
+    });
+    if (!creatorCheck.rows.length) {
+      return res.status(404).json({ error: 'Креатор не найден' });
+    }
+
+    const result = await ensureFunnelPeriod({
+      wsId: req.workspaceId,
+      creatorId: creator_id,
+      label,
+      dateFrom: date_from,
+      dateTo: date_to || null,
+      isActive: 1,
+    });
+
+    res.status(result.created ? 201 : 200).json({ ok: true, period_id: result.id, created: result.created });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
