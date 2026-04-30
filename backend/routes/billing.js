@@ -32,8 +32,8 @@ router.post('/create-payment', async (req, res) => {
     const existing = await db.execute({ sql: 'SELECT id FROM users WHERE email = ?', args: [email.toLowerCase()] });
     const isExistingUser = existing.rows.length > 0;
 
-    const { YooCheckout } = await import('yookassa');
-    const checkout = new YooCheckout({
+    const { default: YooKassa } = await import('yookassa');
+    const checkout = new YooKassa({
       shopId: process.env.YOOKASSA_SHOP_ID,
       secretKey: process.env.YOOKASSA_SECRET_KEY,
     });
@@ -164,8 +164,8 @@ router.post('/charge-subscription', async (req, res) => {
       args: [today],
     });
 
-    const { YooCheckout } = await import('yookassa');
-    const checkout = new YooCheckout({
+    const { default: YooKassa } = await import('yookassa');
+    const checkout = new YooKassa({
       shopId: process.env.YOOKASSA_SHOP_ID,
       secretKey: process.env.YOOKASSA_SECRET_KEY,
     });
