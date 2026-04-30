@@ -9,6 +9,7 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 .sidebar {
@@ -87,6 +88,8 @@ nav { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; }
   flex: 1;
   overflow-y: auto;
   background: var(--bg);
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ─── Theme toggle ────────────────────────────────────────────────────────── */
@@ -162,8 +165,8 @@ nav { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; }
 .nav-settings-mobile-label { display: none; }
 
 @media (max-width: 768px) {
-  .app-layout { flex-direction: column; height: 100dvh; }
-  .app-body { flex-direction: column; overflow: visible; flex: 1; }
+  .app-layout { flex-direction: column; height: 100dvh; min-height: 100dvh; }
+  .app-body { flex-direction: column; overflow: hidden; flex: 1; min-height: 0; }
 
   .sidebar {
     width: 100%;
@@ -211,5 +214,12 @@ nav { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; }
   .nav-settings-avatar { display: none; }
   .nav-settings-mobile-label { display: block; font-size: 9.5px; }
 
-  .main-content { order: 1; flex: 1; overflow-y: auto; min-height: 0; }
+  .main-content {
+    order: 1;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
 }

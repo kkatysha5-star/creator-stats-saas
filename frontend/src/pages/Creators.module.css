@@ -137,10 +137,31 @@
 .selfCreatePage {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  min-height: calc(100dvh - 56px);
+}
+
+.formActions {
+  position: sticky;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 12px;
+  margin-top: 4px;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, var(--card-bg) 24px);
+  z-index: 1;
 }
 
 @media (max-width: 768px) {
   .grid { padding: 0 16px; grid-template-columns: 1fr; gap: 10px; }
   .selfCreateWrap { padding: 0 16px; max-width: none; }
   .selfCreateCard { padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); }
+  .formActions {
+    flex-direction: column-reverse;
+    justify-content: stretch;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    padding-top: 14px;
+  }
+  .formActions > button { width: 100%; }
 }

@@ -378,7 +378,7 @@ function CreatorForm({ initial, colors, onCancel, onSaved, submitLabel = 'Сох
 
       {name && <Avatar name={name} color={color} size={40} />}
       {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+      <div className={styles.formActions}>
         <Btn onClick={onCancel}>Отмена</Btn>
         <Btn variant="primary" onClick={handleSave} loading={loading}>{submitLabel}</Btn>
       </div>

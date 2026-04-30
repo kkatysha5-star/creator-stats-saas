@@ -115,6 +115,7 @@ export default function Settings() {
           ),
         }));
       }
+      showToast('Название сохранено');
     } catch (e) {
       alert(e.message);
     } finally {
@@ -216,9 +217,28 @@ export default function Settings() {
                   : <Avatar name={user?.name || '?'} color="var(--accent)" size={48} />
                 }
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <div className={styles.profileName}>{user?.name}</div>
-                  </div>
+                  {editingName ? (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 4 }}>
+                      <input
+                        value={newName}
+                        onChange={e => setNewName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
+                        autoFocus
+                        style={{ flex: 1, minWidth: 80, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontFamily: 'var(--font)', fontSize: 14, fontWeight: 600, padding: '5px 10px', outline: 'none' }}
+                      />
+                      <Btn variant="primary" onClick={handleSaveName} loading={savingName} small>Сохранить</Btn>
+                      <Btn onClick={() => { setEditingName(false); setNewName(user?.name || ''); }} small>Отмена</Btn>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <div className={styles.profileName}>{user?.name}</div>
+                      <button
+                        onClick={() => { setEditingName(true); setNewName(user?.name || ''); }}
+                        title="Изменить имя"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: '2px', borderRadius: 4, display: 'flex', alignItems: 'center', lineHeight: 1 }}
+                      ><Pencil size={14} strokeWidth={1.5} /></button>
+                    </div>
+                  )}
                   <div className={styles.profileEmail}>{user?.email}</div>
                   <div style={{ marginTop: 10 }}>
                     <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 2 }}>Контент-завод</div>
@@ -332,16 +352,23 @@ export default function Settings() {
 
         <div className={styles.section}>
           <h2 className={styles.sectionTitle}>Контент-завод</h2>
-          <Input
-            label="Название контент-завода"
-            placeholder="Например: КЗ Анастасии"
-            value={workspaceName}
-            onChange={e => setWorkspaceName(e.target.value)}
-          />
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Btn variant="primary" onClick={handleSaveWorkspaceName} loading={savingWorkspaceName}>
-              Сохранить название
-            </Btn>
+          <div className={styles.workspaceNameForm}>
+            <Input
+              label="Название контент-завода"
+              placeholder="Например: КЗ Анастасии"
+              value={workspaceName}
+              onChange={e => setWorkspaceName(e.target.value)}
+            />
+            <div className={styles.workspaceNameActions}>
+              <Btn
+                variant="primary"
+                onClick={handleSaveWorkspaceName}
+                loading={savingWorkspaceName}
+                disabled={savingWorkspaceName}
+              >
+                Сохранить название
+              </Btn>
+            </div>
           </div>
         </div>
 
