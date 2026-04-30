@@ -1,12 +1,9 @@
 const BASE = '/api';
 let currentWorkspaceId = null;
 
-async function req(method, path, body, adminPwd) {
+async function req(method, path, body) {
   const headers = {};
   if (body) headers['Content-Type'] = 'application/json';
-  const storedPwd = sessionStorage.getItem('funnel_admin_pwd');
-  const pwd = adminPwd || storedPwd;
-  if (pwd) headers['x-admin-password'] = pwd;
   if (currentWorkspaceId) headers['x-workspace-id'] = currentWorkspaceId;
 
   const res = await fetch(`${BASE}${path}`, {
@@ -97,10 +94,4 @@ export const api = {
   getBillingStatus: () => req('GET', '/billing/status'),
   createPayment: (body) => req('POST', '/billing/create-payment', body),
   cancelSubscription: () => req('POST', '/billing/cancel'),
-  checkAdminPassword: async (pwd) => {
-    try {
-      await req('GET', '/funnel/periods/private', null, pwd);
-      return true;
-    } catch { return false; }
-  },
 };

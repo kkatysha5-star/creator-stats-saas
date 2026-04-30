@@ -5,8 +5,6 @@ import { PageHeader, Avatar, Btn, Input, Select, Modal, Loader, Empty, DatePicke
 import { useAuth } from '../App.jsx';
 import styles from './Funnel.module.css';
 
-const ADMIN_KEY = 'funnel_admin_unlocked';
-
 const PLAN_HAS_FUNNEL = { pro: true };
 
 function FunnelUpgradeWall() {
@@ -77,12 +75,13 @@ export default function Funnel() {
 }
 
 function FunnelInner() {
+  const { auth } = useAuth();
+  const role = auth?.workspaces?.[0]?.role;
+  const canEdit = role === 'owner' || role === 'manager';
   const [periods, setPeriods] = useState([]);
   const [privateData, setPrivateData] = useState({});
   const [creators, setCreators] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(() => sessionStorage.getItem(ADMIN_KEY) === '1');
-  const [showLogin, setShowLogin] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showNewPeriod, setShowNewPeriod] = useState(false);
   const [showSnapshot, setShowSnapshot] = useState(null);
@@ -96,7 +95,7 @@ function FunnelInner() {
       const [ps, crs] = await Promise.all([api.getFunnelPeriods(), api.getCreators()]);
       setPeriods(ps);
       setCreators(crs);
-      if (isAdmin) {
+      if (canEdit) {
         try {
           const priv = await api.getFunnelPrivate();
           const map = {};
@@ -106,7 +105,7 @@ function FunnelInner() {
       }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [isAdmin]);
+  }, [canEdit]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -124,26 +123,6 @@ function FunnelInner() {
   useEffect(() => {
     if (labels.length && !selectedLabel) setSelectedLabel(labels[0]);
   }, [labels]);
-
-  const handleLogin = async (pwd) => {
-    sessionStorage.setItem('funnel_admin_pwd', pwd);
-    const ok = await api.checkAdminPassword(pwd);
-    if (ok) {
-      sessionStorage.setItem(ADMIN_KEY, '1');
-      setIsAdmin(true);
-      setShowLogin(false);
-    } else {
-      sessionStorage.removeItem('funnel_admin_pwd');
-      alert('Неверный пароль');
-    }
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem(ADMIN_KEY);
-    sessionStorage.removeItem('funnel_admin_pwd');
-    setIsAdmin(false);
-    setPrivateData({});
-  };
 
   // Периоды выбранного месяца
   const currentPeriods = useMemo(() =>
@@ -181,20 +160,17 @@ function FunnelInner() {
     { key: 'cac',    label: 'CAC 🔒',     fmt: fmtRub, private: true },
   ];
 
-  const allCols = isAdmin ? [...COLS, ...ADMIN_COLS] : COLS;
+  const allCols = canEdit ? [...COLS, ...ADMIN_COLS] : COLS;
 
   return (
     <div className={styles.page}>
       <PageHeader title="Воронка продаж" subtitle="Конверсии и продажи по периодам">
         <div style={{ display: 'flex', gap: 8 }}>
-          {isAdmin ? (
+          {canEdit && (
             <>
               <Btn small onClick={() => setShowImport(true)}>📥 Импорт из Excel</Btn>
               <Btn variant="primary" small onClick={() => setShowNewPeriod(true)}>+ Период</Btn>
-              <Btn small onClick={handleLogout}>Выйти</Btn>
             </>
-          ) : (
-            <Btn small onClick={() => setShowLogin(true)}>🔒 Редактировать</Btn>
           )}
         </div>
       </PageHeader>
@@ -224,7 +200,7 @@ function FunnelInner() {
       </div>
 
       {loading ? <Loader /> : currentPeriods.length === 0
-        ? <Empty icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>} text="Нет данных за этот период" sub={isAdmin ? 'Создайте периоды для креаторов' : 'Данные ещё не внесены'} />
+        ? <Empty icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>} text="Нет данных за этот период" sub={canEdit ? 'Создайте периоды для креаторов' : 'Данные ещё не внесены'} />
         : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
@@ -234,7 +210,7 @@ function FunnelInner() {
                   {allCols.map(c => (
                     <th key={c.key} className={styles.th + (c.private ? ' ' + styles.thPrivate : '')}>{c.label}</th>
                   ))}
-                  {isAdmin && <th className={styles.th}>Действия</th>}
+                  {canEdit && <th className={styles.th}>Действия</th>}
                 </tr>
               </thead>
               <tbody>
@@ -267,7 +243,7 @@ function FunnelInner() {
                           </td>
                         );
                       })}
-                      {isAdmin && ADMIN_COLS.map(c => {
+                      {canEdit && ADMIN_COLS.map(c => {
                         const val = priv ? priv[c.key] : null;
                         return (
                           <td key={c.key} className={styles.td + ' ' + styles.tdPrivate}>
@@ -275,7 +251,7 @@ function FunnelInner() {
                           </td>
                         );
                       })}
-                      {isAdmin && (
+                      {canEdit && (
                         <td className={styles.td}>
                           <div className={styles.actions}>
                             <button className={styles.iconBtn} onClick={() => setShowSnapshot(p)} title="Внести данные">+</button>
@@ -302,7 +278,7 @@ function FunnelInner() {
         <div className={styles.historySection}>
           <h2 className={styles.sectionTitle}>История записей</h2>
           {currentPeriods.map(p => p.snapshots?.length > 0 && (
-            <HistoryBlock key={p.id} period={p} isAdmin={isAdmin} onDelete={async (sid) => {
+            <HistoryBlock key={p.id} period={p} canEdit={canEdit} onDelete={async (sid) => {
               if (!confirm('Удалить запись?')) return;
               await api.deleteFunnelSnapshot(sid);
               load();
@@ -312,7 +288,6 @@ function FunnelInner() {
       )}
 
       {showImport && <ImportModal creators={creators} onClose={() => setShowImport(false)} onSaved={() => { setShowImport(false); load(); }} />}
-      {showLogin && <LoginModal onLogin={handleLogin} onClose={() => setShowLogin(false)} />}
       {showNewPeriod && <NewPeriodModal creators={creators} onClose={() => setShowNewPeriod(false)} onSaved={() => { setShowNewPeriod(false); load(); }} />}
       {showSnapshot && <SnapshotModal period={showSnapshot} onClose={() => setShowSnapshot(null)} onSaved={() => { setShowSnapshot(null); load(); }} />}
       {showEdit && <EditPeriodModal period={showEdit} onClose={() => setShowEdit(null)} onSaved={() => { setShowEdit(null); load(); }} />}
@@ -320,7 +295,7 @@ function FunnelInner() {
   );
 }
 
-function HistoryBlock({ period: p, isAdmin, onDelete }) {
+function HistoryBlock({ period: p, canEdit, onDelete }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={styles.historyBlock}>
@@ -339,7 +314,7 @@ function HistoryBlock({ period: p, isAdmin, onDelete }) {
               <span>🛒 {fmtNum(s.cart)}</span>
               <span>✅ {fmtNum(s.orders)}</span>
               {s.note && <span className={styles.note}>{s.note}</span>}
-              {isAdmin && <button className={styles.iconBtn + ' ' + styles.del + ' ' + styles.tiny} onClick={() => onDelete(s.id)}>✕</button>}
+              {canEdit && <button className={styles.iconBtn + ' ' + styles.del + ' ' + styles.tiny} onClick={() => onDelete(s.id)}>✕</button>}
             </div>
           ))}
         </div>
@@ -696,17 +671,6 @@ function ImportModal({ creators, onClose, onSaved }) {
       )}
 
       {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
-    </Modal>
-  );
-}
-
-function LoginModal({ onLogin, onClose }) {
-  const [pwd, setPwd] = useState('');
-  return (
-    <Modal title="Вход для редактирования" onClose={onClose}
-      footer={<><Btn onClick={onClose}>Отмена</Btn><Btn variant="primary" onClick={() => onLogin(pwd)}>Войти</Btn></>}
-    >
-      <Input label="Пароль" type="password" value={pwd} onChange={e => setPwd(e.target.value)} onKeyDown={e => e.key === 'Enter' && onLogin(pwd)} autoFocus />
     </Modal>
   );
 }

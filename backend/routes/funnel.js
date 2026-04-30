@@ -4,11 +4,8 @@ import { requireAuth, PLAN_LIMITS } from '../middleware/auth.js';
 
 const router = Router();
 
-// Безопасная проверка пароля — false если env не задан
-function isAdmin(req) {
-  const pwd = process.env.ADMIN_PASSWORD;
-  if (!pwd) return false;
-  return req.headers['x-admin-password'] === pwd;
+function canEdit(req) {
+  return req.userRole === 'owner' || req.userRole === 'manager';
 }
 
 // Проверяет что у залогиненного пользователя есть доступ к воронке по плану
@@ -94,9 +91,9 @@ router.get('/periods', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Приватные данные — только для админа
+// Приватные данные — только для owner/manager
 router.get('/periods/private', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
+  if (!canEdit(req)) return res.status(403).json({ error: 'Forbidden' });
   try {
     const result = await db.execute({
       sql: `SELECT fp.id, fp.payout,
@@ -117,9 +114,9 @@ router.get('/periods/private', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Создать период — только админ
+// Создать период — только owner/manager
 router.post('/periods', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
+  if (!canEdit(req)) return res.status(403).json({ error: 'Forbidden' });
   try {
     const { creator_id, label, date_from, date_to } = req.body;
     if (!creator_id || !label || !date_from) return res.status(400).json({ error: 'Заполните все поля' });
@@ -131,9 +128,9 @@ router.post('/periods', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Обновить период — только админ
+// Обновить период — только owner/manager
 router.put('/periods/:id', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
+  if (!canEdit(req)) return res.status(403).json({ error: 'Forbidden' });
   try {
     const { date_to, payout, is_active, label } = req.body;
     await db.execute({
@@ -144,9 +141,9 @@ router.put('/periods/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Удалить период — только админ
+// Удалить период — только owner/manager
 router.delete('/periods/:id', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
+  if (!canEdit(req)) return res.status(403).json({ error: 'Forbidden' });
   try {
     await db.execute({
       sql: 'DELETE FROM funnel_periods WHERE id = ? AND workspace_id = ?',
@@ -156,9 +153,9 @@ router.delete('/periods/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Добавить снимок — только админ
+// Добавить снимок — только owner/manager
 router.post('/periods/:id/snapshots', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
+  if (!canEdit(req)) return res.status(403).json({ error: 'Forbidden' });
   try {
     const { visits, cart, orders, note } = req.body;
     await db.execute({
@@ -169,18 +166,18 @@ router.post('/periods/:id/snapshots', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Удалить снимок — только админ
+// Удалить снимок — только owner/manager
 router.delete('/snapshots/:id', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
+  if (!canEdit(req)) return res.status(403).json({ error: 'Forbidden' });
   try {
     await db.execute({ sql: 'DELETE FROM funnel_snapshots WHERE id = ?', args: [req.params.id] });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Массовый импорт данных из Excel/CSV — только админ
+// Массовый импорт данных из Excel/CSV — только owner/manager
 router.post('/import', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
+  if (!canEdit(req)) return res.status(403).json({ error: 'Forbidden' });
   const { rows } = req.body;
   if (!Array.isArray(rows) || rows.length === 0) return res.status(400).json({ error: 'Нет данных' });
 
