@@ -93,16 +93,17 @@ export async function billingWebhook(req, res) {
         userRow = { id: Number(r.lastInsertRowid) };
       }
 
-      const wsResult = await db.execute({
-        sql: `INSERT INTO workspaces (name, slug, owner_id, plan, subscription_active, payment_method_id, next_billing_date)
-              VALUES (?, ?, ?, ?, 1, ?, ?)`,
-        args: [`${fullName} workspace`, `ws-${randomUUID().slice(0, 8)}`, userRow.id, planId, paymentMethodId || null, nbDate],
+      const wsId = randomUUID();
+      await db.execute({
+        sql: `INSERT INTO workspaces (id, name, slug, owner_id, plan, subscription_active, payment_method_id, next_billing_date)
+              VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+        args: [wsId, `${fullName} workspace`, `ws-${randomUUID().slice(0, 8)}`, userRow.id, planId, paymentMethodId || null, nbDate],
       });
 
       // Добавляем owner в workspace_members
       await db.execute({
         sql: `INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, 'owner')`,
-        args: [Number(wsResult.lastInsertRowid), userRow.id],
+        args: [wsId, userRow.id],
       });
 
       const resetToken = randomUUID();
@@ -117,12 +118,14 @@ export async function billingWebhook(req, res) {
 
     } else {
       // Существующий пользователь — обновляем воркспейс
+      const user = (await db.execute({ sql: 'SELECT id, name, email FROM users WHERE email = ?', args: [email.toLowerCase()] })).rows[0];
+      if (!user) return;
+
       const wsRow = await db.execute({
         sql: `SELECT w.id FROM workspaces w
-              JOIN users u ON u.id = w.owner_id
-              WHERE u.email = ?
+              WHERE w.owner_id = ?
               LIMIT 1`,
-        args: [email.toLowerCase()],
+        args: [user.id],
       });
 
       if (wsRow.rows.length > 0) {
@@ -131,15 +134,23 @@ export async function billingWebhook(req, res) {
           sql: `UPDATE workspaces SET plan = ?, subscription_active = 1, payment_method_id = ?, next_billing_date = ? WHERE id = ?`,
           args: [planId, paymentMethodId || null, nbDate, wsId],
         });
+      } else {
+        const wsId = randomUUID();
+        await db.execute({
+          sql: `INSERT INTO workspaces (id, name, slug, owner_id, plan, subscription_active, payment_method_id, next_billing_date)
+                VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+          args: [wsId, `${user.name || fullName} workspace`, `ws-${randomUUID().slice(0, 8)}`, user.id, planId, paymentMethodId || null, nbDate],
+        });
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, 'owner')`,
+          args: [wsId, user.id],
+        });
       }
 
-      const user = (await db.execute({ sql: 'SELECT name, email FROM users WHERE email = ?', args: [email.toLowerCase()] })).rows[0];
-      if (user) {
-        await sendPaymentSuccess(
-          { name: user.name, email: user.email },
-          { planName: pName, amount, nextDate: nbDate }
-        ).catch(console.error);
-      }
+      await sendPaymentSuccess(
+        { name: user.name, email: user.email },
+        { planName: pName, amount, nextDate: nbDate }
+      ).catch(console.error);
     }
 
     // Очищаем pending
