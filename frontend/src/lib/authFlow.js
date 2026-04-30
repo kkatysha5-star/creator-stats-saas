@@ -1,5 +1,14 @@
 import { api } from './api.js';
 
+function withActiveWorkspaceFirst(data, workspaceId) {
+  if (!data?.workspaces?.length || !workspaceId) return data;
+  const index = data.workspaces.findIndex(w => String(w.id) === String(workspaceId));
+  if (index <= 0) return data;
+  const workspaces = [...data.workspaces];
+  const [active] = workspaces.splice(index, 1);
+  return { ...data, workspaces: [active, ...workspaces] };
+}
+
 export async function finishAuth(setAuth, navigate, inviteToken, preferredWorkspaceId = null) {
   let joinedWorkspaceId = null;
   if (inviteToken) {
@@ -15,7 +24,7 @@ export async function finishAuth(setAuth, navigate, inviteToken, preferredWorksp
     : data?.workspaces?.[0];
 
   if (workspace) api.setWorkspace(workspace.id);
-  setAuth(data);
+  setAuth(withActiveWorkspaceFirst(data, workspace?.id));
 
   if (!workspace) return navigate('/onboarding');
   if (workspace.role !== 'creator') return navigate('/');

@@ -1,10 +1,11 @@
 const BASE = '/api';
-let currentWorkspaceId = null;
+let currentWorkspaceId = localStorage.getItem('currentWorkspaceId');
 
 async function req(method, path, body) {
   const headers = {};
   if (body) headers['Content-Type'] = 'application/json';
-  if (currentWorkspaceId) headers['x-workspace-id'] = currentWorkspaceId;
+  const skipWorkspaceHeader = path.startsWith('/auth/') || path.startsWith('/workspaces/join/');
+  if (currentWorkspaceId && !skipWorkspaceHeader) headers['x-workspace-id'] = currentWorkspaceId;
 
   const res = await fetch(`${BASE}${path}`, {
     method,
@@ -18,7 +19,12 @@ async function req(method, path, body) {
 }
 
 export const api = {
-  setWorkspace(id) { currentWorkspaceId = id; },
+  setWorkspace(id) {
+    currentWorkspaceId = id ? String(id) : null;
+    if (currentWorkspaceId) localStorage.setItem('currentWorkspaceId', currentWorkspaceId);
+    else localStorage.removeItem('currentWorkspaceId');
+  },
+  getWorkspaceId() { return currentWorkspaceId; },
 
   // Auth
   getMe: () => req('GET', '/auth/me'),

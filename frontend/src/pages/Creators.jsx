@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { fmtNum } from '../lib/utils.js';
 import { PageHeader, Avatar, Btn, Input, Modal, Loader, Empty, showToast, DatePicker } from '../components/UI.jsx';
@@ -60,12 +61,14 @@ function CreatorLimitModal({ plan, limit, onClose }) {
 
 export default function Creators({ startNew = false }) {
   const { auth } = useAuth();
+  const navigate = useNavigate();
   const workspace = auth?.workspaces?.[0];
   const plan = workspace?.plan || 'trial';
   const limit = PLAN_LIMITS[plan] ?? 1;
   const role = workspace?.role;
   const canEdit = role === 'owner' || role === 'manager';
   const seesOwnOnly = role === 'creator' && !!workspace?.creator_sees_own_only;
+  const isCreatorNewPage = startNew && role === 'creator';
   const userEmail = auth?.user?.email;
 
   const [creators, setCreators] = useState([]);
@@ -91,7 +94,10 @@ export default function Creators({ startNew = false }) {
     try { setCreators(await api.getCreators()); } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!isCreatorNewPage) load();
+    else setLoading(false);
+  }, [isCreatorNewPage]);
   useEffect(() => {
     if (startNew && role === 'creator') setShowAdd(true);
   }, [startNew, role]);
@@ -114,6 +120,27 @@ export default function Creators({ startNew = false }) {
       }
     } catch (e) { console.error(e); }
   };
+
+  if (isCreatorNewPage) {
+    return (
+      <div className={styles.page}>
+        <PageHeader
+          title="Создайте свою карточку креатора"
+          subtitle="Эта карточка привяжется к вашему аккаунту в текущем workspace"
+        />
+        <div className={styles.selfCreateWrap}>
+          <div className={styles.selfCreateCard}>
+            <CreatorForm
+              colors={COLORS}
+              onCancel={() => navigate('/')}
+              onSaved={() => navigate('/')}
+              submitLabel="Создать карточку"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
@@ -263,6 +290,19 @@ function InviteModal({ creator, inviteUrl, onClose }) {
 }
 
 function CreatorModal({ title, initial, colors, onClose, onSaved }) {
+  return (
+    <Modal title={title} onClose={onClose} width={380} data-tour="creator-modal">
+      <CreatorForm
+        initial={initial}
+        colors={colors}
+        onCancel={onClose}
+        onSaved={onSaved}
+      />
+    </Modal>
+  );
+}
+
+function CreatorForm({ initial, colors, onCancel, onSaved, submitLabel = 'Сохранить' }) {
   const { auth } = useAuth();
   const role = auth?.workspaces?.[0]?.role;
   const isCreatorSelfCreate = !initial && role === 'creator';
@@ -301,7 +341,7 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
   };
 
   return (
-    <Modal title={title} onClose={onClose} width={380} data-tour="creator-modal">
+    <>
       <Input label="Имя" placeholder="Анна К." value={name} onChange={e => setName(e.target.value)} />
       <Input label="Email (для приглашения)" placeholder="anna@example.com" type="email" value={email} onChange={e => setEmail(e.target.value)} />
       <Input label="Username (необязательно)" placeholder="@username" value={username} onChange={e => setUsername(e.target.value)} />
@@ -339,9 +379,9 @@ function CreatorModal({ title, initial, colors, onClose, onSaved }) {
       {name && <Avatar name={name} color={color} size={40} />}
       {error && <p style={{ color: '#ff5050', fontSize: 12 }}>{error}</p>}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <Btn onClick={onClose}>Отмена</Btn>
-        <Btn variant="primary" onClick={handleSave} loading={loading}>Сохранить</Btn>
+        <Btn onClick={onCancel}>Отмена</Btn>
+        <Btn variant="primary" onClick={handleSave} loading={loading}>{submitLabel}</Btn>
       </div>
-    </Modal>
+    </>
   );
 }

@@ -109,6 +109,24 @@
 .planVal { color: var(--text2); font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 600; }
 .planSub { color: var(--text3); font-size: 12px; }
 
+.selfCreateWrap {
+  padding: 0 28px;
+  max-width: 560px;
+}
+
+.selfCreateCard {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-top: 1px solid var(--card-border-top);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 @media (max-width: 768px) {
   .grid { padding: 0 16px; grid-template-columns: 1fr; gap: 10px; }
+  .selfCreateWrap { padding: 0 16px; max-width: none; }
+  .selfCreateCard { padding: 16px; }
 }

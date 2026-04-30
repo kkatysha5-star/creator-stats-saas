@@ -160,6 +160,7 @@ export default function Settings() {
 
   const handleLogout = async () => {
     await api.logout();
+    api.setWorkspace(null);
     window.location.href = '/login';
   };
 

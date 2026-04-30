@@ -4,11 +4,18 @@ import { requireAuth, requireActivePlan, PLAN_LIMITS } from '../middleware/auth.
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const wsId = req.workspaceId || req.query.workspace_id;
     if (!wsId) return res.json([]);
-    const result = await db.execute({ sql: 'SELECT * FROM creators WHERE workspace_id = ? ORDER BY name', args: [wsId] });
+    const result = await db.execute({
+      sql: req.userRole === 'creator'
+        ? `SELECT * FROM creators
+           WHERE workspace_id = ? AND (user_id = ? OR lower(email) = lower(?))
+           ORDER BY name`
+        : 'SELECT * FROM creators WHERE workspace_id = ? ORDER BY name',
+      args: req.userRole === 'creator' ? [wsId, req.user.id, req.user.email] : [wsId],
+    });
     res.json(result.rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -29,11 +36,20 @@ router.get('/me', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const result = await db.execute({ sql: 'SELECT * FROM creators WHERE id = ?', args: [req.params.id] });
     if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
-    res.json(result.rows[0]);
+    const creator = result.rows[0];
+    if (req.workspaceId && String(creator.workspace_id) !== String(req.workspaceId)) {
+      return res.status(403).json({ error: 'Нет доступа к этому workspace' });
+    }
+    if (req.userRole === 'creator') {
+      const isOwn = Number(creator.user_id) === Number(req.user.id)
+        || creator.email?.toLowerCase() === req.user.email?.toLowerCase();
+      if (!isOwn) return res.status(403).json({ error: 'Недостаточно прав' });
+    }
+    res.json(creator);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

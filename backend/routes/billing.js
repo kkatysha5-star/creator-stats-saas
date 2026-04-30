@@ -267,6 +267,9 @@ router.post('/cancel', requireAuth, requireRole(['owner']), async (req, res) => 
 // ─── GET /api/billing/status ─────────────────────────────────────────────────
 router.get('/status', requireAuth, async (req, res) => {
   try {
+    if (!req.workspaceId) return res.status(400).json({ error: 'workspace_id required' });
+    if (req.userRole !== 'owner') return res.status(403).json({ error: 'Недостаточно прав' });
+
     const result = await db.execute({
       sql: 'SELECT plan, subscription_active, next_billing_date FROM workspaces WHERE id = ?',
       args: [req.workspaceId],

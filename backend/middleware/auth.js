@@ -84,7 +84,7 @@ export async function attachWorkspace(req, res, next) {
   if (!req.user) return next();
 
   try {
-    const wsId = req.headers['x-workspace-id'] || req.query.workspace_id;
+    const wsId = req.headers['x-workspace-id'];
     if (!wsId) return next();
 
     const result = await db.execute({
@@ -95,12 +95,14 @@ export async function attachWorkspace(req, res, next) {
     });
 
     if (result.rows.length) {
-      req.workspaceId = parseInt(wsId);
+      req.workspaceId = wsId;
       req.userRole = result.rows[0].role;
       req.workspace = result.rows[0];
+    } else {
+      return res.status(403).json({ error: 'Нет доступа к этому workspace' });
     }
     next();
   } catch (err) {
-    next();
+    res.status(500).json({ error: err.message });
   }
 }

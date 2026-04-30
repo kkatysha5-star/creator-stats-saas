@@ -27,6 +27,15 @@ import './App.css';
 export const AuthContext = createContext(null);
 export function useAuth() { return useContext(AuthContext); }
 
+function withActiveWorkspaceFirst(data, workspaceId) {
+  if (!data?.workspaces?.length || !workspaceId) return data;
+  const index = data.workspaces.findIndex(w => String(w.id) === String(workspaceId));
+  if (index <= 0) return data;
+  const workspaces = [...data.workspaces];
+  const [active] = workspaces.splice(index, 1);
+  return { ...data, workspaces: [active, ...workspaces] };
+}
+
 // ─── Theme ───────────────────────────────────────────────────────────────────
 function useTheme() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -88,8 +97,12 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', saved);
 
     api.getMe().then(data => {
-      setAuth(data);
-      if (data?.workspaces?.length > 0) api.setWorkspace(data.workspaces[0].id);
+      const savedWorkspaceId = api.getWorkspaceId();
+      const activeWorkspace = data?.workspaces?.find(w => String(w.id) === String(savedWorkspaceId))
+        || data?.workspaces?.[0];
+      if (activeWorkspace) api.setWorkspace(activeWorkspace.id);
+      else api.setWorkspace(null);
+      setAuth(withActiveWorkspaceFirst(data, activeWorkspace?.id));
     }).catch(() => setAuth(false)).finally(() => setLoading(false));
   }, []);
 
@@ -195,7 +208,7 @@ function AppLayout({ auth }) {
   return (
     <div className="app-layout">
       <EmailVerifyBanner user={auth?.user} setAuth={setAuth} />
-      <TrialBanner workspace={workspace} />
+      {role !== 'creator' && <TrialBanner workspace={workspace} />}
       <div className="app-body">
         <aside className="sidebar">
           <div className="sidebar-logo">
@@ -222,18 +235,19 @@ function AppLayout({ auth }) {
                 <BarChart2 size={16} strokeWidth={1.2} /> Воронка
               </NavLink>
             )}
-            {/* Settings — в nav чтобы не вываливаться из flex-ряда на мобиле */}
-            <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active nav-settings' : 'nav-item nav-settings'}>
-              <Settings2 size={16} strokeWidth={1.2} />
-              <div style={{ overflow: 'hidden', flex: 1 }} className="nav-settings-label">
-                <div style={{ fontSize: 12, fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{auth?.user?.name}</div>
-                <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 400 }}>Настройки</div>
-              </div>
-              {auth?.user?.avatar && (
-                <img src={auth.user.avatar} style={{ width: 22, height: 22, borderRadius: '50%', marginLeft: 'auto', flexShrink: 0 }} className="nav-settings-avatar" alt="" />
-              )}
-              <span className="nav-settings-mobile-label">Настройки</span>
-            </NavLink>
+            {role !== 'creator' && (
+              <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active nav-settings' : 'nav-item nav-settings'}>
+                <Settings2 size={16} strokeWidth={1.2} />
+                <div style={{ overflow: 'hidden', flex: 1 }} className="nav-settings-label">
+                  <div style={{ fontSize: 12, fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{auth?.user?.name}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 400 }}>Настройки</div>
+                </div>
+                {auth?.user?.avatar && (
+                  <img src={auth.user.avatar} style={{ width: 22, height: 22, borderRadius: '50%', marginLeft: 'auto', flexShrink: 0 }} className="nav-settings-avatar" alt="" />
+                )}
+                <span className="nav-settings-mobile-label">Настройки</span>
+              </NavLink>
+            )}
           </nav>
 
           <div className="sidebar-bottom">
@@ -251,11 +265,56 @@ function AppLayout({ auth }) {
             <Route path="/creators/new" element={(canSeeCreators || canCreateOwnCreator) ? <Creators startNew /> : <Navigate to="/" />} />
             <Route path="/creator/:id" element={<CreatorDashboard />} />
             <Route path="/funnel" element={canSeeFunnel ? <Funnel /> : <Navigate to="/" />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings" element={role === 'creator' ? <CreatorSettingsBlocked /> : <Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
       </div>
+    </div>
+  );
+}
+
+function CreatorSettingsBlocked() {
+  const { auth } = useAuth();
+  const handleLogout = async () => {
+    await api.logout();
+    api.setWorkspace(null);
+    window.location.href = '/login';
+  };
+
+  return (
+    <div style={{ padding: '0 0 56px' }}>
+      <PageHeaderShim title="Настройки" subtitle="Этот раздел доступен владельцу workspace" />
+      <div style={{ padding: '0 28px' }}>
+        <div style={{
+          maxWidth: 520,
+          background: 'var(--card-bg)',
+          border: '1px solid var(--card-border)',
+          borderTop: '1px solid var(--card-border-top)',
+          borderRadius: 'var(--radius)',
+          padding: 22,
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
+            Настройки доступны владельцу
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>
+            Вы вошли как креатор в workspace команды. Тариф, команда и платежи скрыты.
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>{auth?.user?.email}</div>
+          <button onClick={handleLogout} className="theme-toggle" style={{ width: 'auto', padding: '0 14px' }}>
+            Выйти из аккаунта
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PageHeaderShim({ title, subtitle }) {
+  return (
+    <div style={{ padding: '22px 28px 18px' }}>
+      <h1 style={{ margin: 0, fontSize: 22, color: 'var(--text)' }}>{title}</h1>
+      <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text3)' }}>{subtitle}</p>
     </div>
   );
 }
