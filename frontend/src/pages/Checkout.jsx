@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
+import { fmtDate } from '../lib/utils.js';
 
 const PLANS = [
   {
@@ -38,6 +39,37 @@ export default function Checkout() {
 }
 
 function SuccessScreen() {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [billingStatus, setBillingStatus] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    api.getMe()
+      .then(async () => {
+        if (cancelled) return;
+        setIsAuthed(true);
+        try {
+          const status = await api.getBillingStatus();
+          if (!cancelled) setBillingStatus(status);
+        } catch {}
+      })
+      .catch(() => {
+        if (!cancelled) setIsAuthed(false);
+      })
+      .finally(() => {
+        if (!cancelled) setAuthChecked(true);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  const subscriptionDate = fmtDate(billingStatus?.next_billing_date);
+  const successText = billingStatus?.next_billing_date
+    ? <>Подписка активна до <strong style={{ color: '#fff', fontWeight: 700 }}>{subscriptionDate}</strong></>
+    : 'Оплата прошла успешно. Подписка активируется...';
+
   return (
     <div style={pageStyle}>
       <div style={cardStyle}>
@@ -47,10 +79,18 @@ function SuccessScreen() {
           </svg>
         </div>
         <h1 style={{ fontSize: 26, fontWeight: 700, color: '#fff', margin: '0 0 12px', letterSpacing: -0.5 }}>Оплата прошла!</h1>
-        <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.55)', margin: '0 0 28px', lineHeight: 1.6 }}>
-          Проверьте почту — мы отправили письмо с инструкцией для входа в аккаунт.
-        </p>
-        <a href="/login" style={btnStyle}>Войти в аккаунт →</a>
+        {isAuthed ? (
+          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.55)', margin: 0, lineHeight: 1.6 }}>
+            {successText}
+          </p>
+        ) : authChecked ? (
+          <>
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.55)', margin: '0 0 28px', lineHeight: 1.6 }}>
+              Проверьте почту — мы отправили письмо с инструкцией для входа в аккаунт.
+            </p>
+            <a href="/login" style={btnStyle}>Войти в аккаунт →</a>
+          </>
+        ) : null}
       </div>
     </div>
   );
