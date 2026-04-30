@@ -80,11 +80,12 @@ router.post('/register', async (req, res) => {
       acceptedInvite = await acceptInvite(req.body.inviteToken, user);
       if (!acceptedInvite) return res.status(404).json({ error: 'Инвайт не найден' });
     } else {
+      const publicId = randomUUID();
       const slug = name.trim().toLowerCase().replace(/[^a-z0-9\s]/gi, '').replace(/\s+/g, '-').slice(0, 30) + '-' + Date.now().toString().slice(-4);
       const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       const wsResult = await db.execute({
-        sql: 'INSERT INTO workspaces (name, slug, owner_id, plan, trial_ends_at) VALUES (?, ?, ?, ?, ?)',
-        args: [`КЗ ${name.trim()}`, slug, userId, 'trial', trialEndsAt]
+        sql: 'INSERT INTO workspaces (name, slug, owner_id, plan, trial_ends_at, public_id) VALUES (?, ?, ?, ?, ?, ?)',
+        args: [`КЗ ${name.trim()}`, slug, userId, 'trial', trialEndsAt, publicId]
       });
       const wsId = Number(wsResult.lastInsertRowid);
       await db.execute({

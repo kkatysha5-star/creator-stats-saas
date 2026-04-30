@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomUUID } from 'crypto';
 import { db } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { acceptInvite } from '../invites.js';
@@ -11,6 +12,7 @@ router.post('/', requireAuth, async (req, res) => {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Введите название' });
 
+    const publicId = randomUUID();
     const slug = name.toLowerCase()
       .replace(/[^a-z0-9а-яё\s]/gi, '')
       .replace(/\s+/g, '-')
@@ -19,8 +21,8 @@ router.post('/', requireAuth, async (req, res) => {
     const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     const result = await db.execute({
-      sql: 'INSERT INTO workspaces (name, slug, owner_id, plan, trial_ends_at) VALUES (?, ?, ?, ?, ?)',
-      args: [name, slug, req.user.id, 'trial', trialEndsAt]
+      sql: 'INSERT INTO workspaces (name, slug, owner_id, plan, trial_ends_at, public_id) VALUES (?, ?, ?, ?, ?, ?)',
+      args: [name, slug, req.user.id, 'trial', trialEndsAt, publicId]
     });
     const wsId = Number(result.lastInsertRowid);
 

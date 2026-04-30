@@ -39,22 +39,29 @@ router.post('/create-payment', async (req, res) => {
   try {
     const existing = await db.execute({ sql: 'SELECT id FROM users WHERE email = ?', args: [email.toLowerCase()] });
     const isExistingUser = existing.rows.length > 0;
-    const workspaceId = workspace_id ? String(workspace_id) : null;
-    if (workspaceId) {
+    const workspaceKey = workspace_id ? String(workspace_id) : null;
+    if (workspaceKey) {
       if (!req.user) return res.status(403).json({ error: 'Нет доступа к этому workspace' });
 
       const access = await db.execute({
-        sql: `SELECT w.id FROM workspaces w
+        sql: `SELECT w.id, w.public_id FROM workspaces w
               LEFT JOIN workspace_members wm ON wm.workspace_id = w.id
-              WHERE w.id = ? AND (w.owner_id = ? OR wm.user_id = ?)
+              WHERE (w.id = ? OR w.public_id = ?) AND (w.owner_id = ? OR wm.user_id = ?)
               LIMIT 1`,
-        args: [workspaceId, req.user.id, req.user.id],
+        args: [workspaceKey, workspaceKey, req.user.id, req.user.id],
       });
       if (!access.rows.length) return res.status(403).json({ error: 'Нет доступа к этому workspace' });
     }
 
     const metadata = { email, fullName, planId, isExistingUser: String(isExistingUser) };
-    if (workspaceId) metadata.workspace_id = workspaceId;
+    if (workspaceKey) {
+      const workspace = await db.execute({
+        sql: 'SELECT id, public_id FROM workspaces WHERE id = ? OR public_id = ? LIMIT 1',
+        args: [workspaceKey, workspaceKey],
+      });
+      if (!workspace.rows.length) return res.status(404).json({ error: 'Workspace not found' });
+      metadata.workspace_id = workspace.rows[0].public_id || String(workspace.rows[0].id);
+    }
 
     const { default: YooKassa } = await import('yookassa');
     const checkout = new YooKassa({
@@ -77,7 +84,7 @@ router.post('/create-payment', async (req, res) => {
     await db.execute({
       sql: `INSERT INTO pending_payments (payment_id, email, full_name, plan_id, workspace_id, is_existing_user, created_at)
             VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
-      args: [payment.id, email.toLowerCase(), fullName, planId, workspaceId, isExistingUser ? 1 : 0],
+      args: [payment.id, email.toLowerCase(), fullName, planId, metadata.workspace_id || null, isExistingUser ? 1 : 0],
     });
 
     res.json({ confirmationUrl: payment.confirmation.confirmation_url });
@@ -138,104 +145,132 @@ export async function billingWebhook(req, res) {
     const nbDate = nextBillingDate();
     const amount = planAmount(planId);
     const pName = planLabel(planId);
+    let paymentSuccessEmail = null;
+    let paymentSuccessName = null;
+    let paymentNewUserEmail = null;
+    let newUserResetUrl = null;
 
-    if (isExistingUser === 'false') {
-      // Новый пользователь — создаём аккаунт и воркспейс
-      let userRow = (await db.execute({ sql: 'SELECT id FROM users WHERE email = ?', args: [email.toLowerCase()] })).rows[0];
-
-      if (!userRow) {
-        const hash = await bcrypt.hash(randomUUID(), 8);
-        const r = await db.execute({
-          sql: `INSERT INTO users (email, name, password_hash, email_verified)
-                VALUES (?, ?, ?, 1)`,
-          args: [email.toLowerCase(), fullName, hash],
-        });
-        userRow = { id: Number(r.lastInsertRowid) };
+    await db.execute('BEGIN');
+    try {
+      await db.execute({
+        sql: 'INSERT OR IGNORE INTO processed_payments (payment_id) VALUES (?)',
+        args: [payment.id],
+      });
+      const insertedCheck = await db.execute('SELECT changes() AS changes');
+      if (!insertedCheck.rows[0] || Number(insertedCheck.rows[0].changes) === 0) {
+        await db.execute('ROLLBACK');
+        return res.json({ ok: true });
       }
 
-      const wsId = randomUUID();
-      await db.execute({
-        sql: `INSERT INTO workspaces (id, name, slug, owner_id, plan, subscription_active, payment_method_id, next_billing_date)
-              VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-        args: [wsId, `${fullName} workspace`, `ws-${randomUUID().slice(0, 8)}`, userRow.id, planId, paymentMethodId || null, nbDate],
-      });
+      if (isExistingUser === 'false') {
+        // Новый пользователь — создаём аккаунт и воркспейс
+        let userRow = (await db.execute({ sql: 'SELECT id FROM users WHERE email = ?', args: [email.toLowerCase()] })).rows[0];
 
-      // Добавляем owner в workspace_members
-      await db.execute({
-        sql: `INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, 'owner')`,
-        args: [wsId, userRow.id],
-      });
+        if (!userRow) {
+          const hash = await bcrypt.hash(randomUUID(), 8);
+          const r = await db.execute({
+            sql: `INSERT INTO users (email, name, password_hash, email_verified)
+                  VALUES (?, ?, ?, 1)`,
+            args: [email.toLowerCase(), fullName, hash],
+          });
+          userRow = { id: Number(r.lastInsertRowid) };
+        }
 
-      const resetToken = randomUUID();
-      const resetExpires = Date.now() + 24 * 60 * 60 * 1000;
-      await db.execute({
-        sql: `UPDATE users SET reset_password_token = ?, reset_password_expires = ? WHERE id = ?`,
-        args: [resetToken, resetExpires, userRow.id],
-      });
-
-      const resetUrl = `https://app.cmetrika.com/reset-password?token=${resetToken}`;
-      await sendPaymentNewUser(email, fullName, pName, resetUrl).catch(console.error);
-
-    } else {
-      // Существующий пользователь — обновляем воркспейс
-      const user = (await db.execute({ sql: 'SELECT id, name, email FROM users WHERE email = ?', args: [email.toLowerCase()] })).rows[0];
-      if (!user) return;
-
-      if (workspace_id) {
-        const workspace = await db.execute({
-          sql: 'SELECT id FROM workspaces WHERE id = ?',
-          args: [workspace_id],
+        const publicId = randomUUID();
+        const wsResult = await db.execute({
+          sql: `INSERT INTO workspaces (name, slug, owner_id, plan, subscription_active, payment_method_id, next_billing_date, public_id)
+                VALUES (?, ?, ?, ?, 1, ?, ?, ?)`,
+          args: [`${fullName} workspace`, `ws-${randomUUID().slice(0, 8)}`, userRow.id, planId, paymentMethodId || null, nbDate, publicId],
         });
-        if (!workspace.rows.length) {
-          console.error('[billing] webhook: workspace not found');
+        const wsId = Number(wsResult.lastInsertRowid);
+
+        // Добавляем owner в workspace_members
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, 'owner')`,
+          args: [wsId, userRow.id],
+        });
+
+        const resetToken = randomUUID();
+        const resetExpires = Date.now() + 24 * 60 * 60 * 1000;
+        await db.execute({
+          sql: `UPDATE users SET reset_password_token = ?, reset_password_expires = ? WHERE id = ?`,
+          args: [resetToken, resetExpires, userRow.id],
+        });
+
+        paymentNewUserEmail = email;
+        newUserResetUrl = `https://app.cmetrika.com/reset-password?token=${resetToken}`;
+      } else {
+        // Существующий пользователь — обновляем воркспейс
+        const user = (await db.execute({ sql: 'SELECT id, name, email FROM users WHERE email = ?', args: [email.toLowerCase()] })).rows[0];
+        if (!user) {
+          await db.execute('ROLLBACK');
           return;
         }
 
-        await db.execute({
-          sql: `UPDATE workspaces SET plan = ?, subscription_active = 1, payment_method_id = ?, next_billing_date = ? WHERE id = ?`,
-          args: [planId, paymentMethodId || null, nbDate, workspace_id],
-        });
-      } else {
-        const wsRow = await db.execute({
-          sql: `SELECT w.id FROM workspaces w
-                WHERE w.owner_id = ?
-                LIMIT 1`,
-          args: [user.id],
-        });
+        if (workspace_id) {
+          const workspace = await db.execute({
+            sql: 'SELECT id, public_id FROM workspaces WHERE public_id = ? OR id = ?',
+            args: [workspace_id, workspace_id],
+          });
+          if (!workspace.rows.length) {
+            console.error('[billing] webhook: workspace not found');
+            await db.execute('ROLLBACK');
+            return res.json({ ok: true });
+          }
 
-        if (wsRow.rows.length > 0) {
-          const wsId = wsRow.rows[0].id;
           await db.execute({
             sql: `UPDATE workspaces SET plan = ?, subscription_active = 1, payment_method_id = ?, next_billing_date = ? WHERE id = ?`,
-            args: [planId, paymentMethodId || null, nbDate, wsId],
+            args: [planId, paymentMethodId || null, nbDate, workspace.rows[0].id],
           });
         } else {
-          const wsId = randomUUID();
-          await db.execute({
-            sql: `INSERT INTO workspaces (id, name, slug, owner_id, plan, subscription_active, payment_method_id, next_billing_date)
-                  VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-            args: [wsId, `${user.name || fullName} workspace`, `ws-${randomUUID().slice(0, 8)}`, user.id, planId, paymentMethodId || null, nbDate],
+          const wsRow = await db.execute({
+            sql: `SELECT w.id FROM workspaces w
+                  WHERE w.owner_id = ?
+                  LIMIT 1`,
+            args: [user.id],
           });
-          await db.execute({
-            sql: `INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, 'owner')`,
-            args: [wsId, user.id],
-          });
+
+          if (wsRow.rows.length > 0) {
+            const wsId = wsRow.rows[0].id;
+            await db.execute({
+              sql: `UPDATE workspaces SET plan = ?, subscription_active = 1, payment_method_id = ?, next_billing_date = ? WHERE id = ?`,
+              args: [planId, paymentMethodId || null, nbDate, wsId],
+            });
+          } else {
+            const publicId = randomUUID();
+            const wsResult = await db.execute({
+              sql: `INSERT INTO workspaces (name, slug, owner_id, plan, subscription_active, payment_method_id, next_billing_date, public_id)
+                    VALUES (?, ?, ?, ?, 1, ?, ?, ?)`,
+              args: [`${user.name || fullName} workspace`, `ws-${randomUUID().slice(0, 8)}`, user.id, planId, paymentMethodId || null, nbDate, publicId],
+            });
+            const wsId = Number(wsResult.lastInsertRowid);
+            await db.execute({
+              sql: `INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, 'owner')`,
+              args: [wsId, user.id],
+            });
+          }
         }
+
+        paymentSuccessEmail = user.email;
+        paymentSuccessName = user.name || fullName;
       }
 
+      await db.execute({ sql: 'DELETE FROM pending_payments WHERE payment_id = ?', args: [payment.id] }).catch(() => {});
+      await db.execute('COMMIT');
+    } catch (dbErr) {
+      await db.execute('ROLLBACK').catch(() => {});
+      throw dbErr;
+    }
+
+    if (paymentNewUserEmail && newUserResetUrl) {
+      await sendPaymentNewUser(paymentNewUserEmail, fullName, pName, newUserResetUrl).catch(console.error);
+    }
+    if (paymentSuccessEmail) {
       await sendPaymentSuccess(
-        { name: user.name, email: user.email },
+        { name: paymentSuccessName || fullName, email: paymentSuccessEmail },
         { planName: pName, amount, nextDate: nbDate }
       ).catch(console.error);
     }
-
-    await db.execute({
-      sql: 'INSERT INTO processed_payments (payment_id) VALUES (?)',
-      args: [payment.id],
-    });
-
-    // Очищаем pending
-    await db.execute({ sql: 'DELETE FROM pending_payments WHERE payment_id = ?', args: [payment.id] }).catch(() => {});
 
     return res.json({ ok: true });
 

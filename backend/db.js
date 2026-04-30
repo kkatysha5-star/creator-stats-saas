@@ -123,6 +123,7 @@ export async function initDB() {
   await db.execute(`
     CREATE TABLE IF NOT EXISTS workspaces (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      public_id TEXT UNIQUE,
       name TEXT NOT NULL,
       slug TEXT UNIQUE NOT NULL,
       owner_id INTEGER NOT NULL,
@@ -168,6 +169,8 @@ export async function initDB() {
 
   // Триал
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN trial_ends_at TEXT'); } catch {}
+  try { await db.execute('ALTER TABLE workspaces ADD COLUMN public_id TEXT'); } catch {}
+  try { await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS workspaces_public_id_idx ON workspaces(public_id)'); } catch {}
 
   // Ошибки парсинга
   try { await db.execute('ALTER TABLE videos ADD COLUMN last_error TEXT'); } catch {}
