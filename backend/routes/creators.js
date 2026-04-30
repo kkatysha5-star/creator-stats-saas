@@ -6,7 +6,7 @@ const router = Router();
 
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const wsId = req.workspaceId || req.query.workspace_id;
+    const wsId = req.workspaceId;
     if (!wsId) return res.json([]);
     const result = await db.execute({
       sql: req.userRole === 'creator'
@@ -22,7 +22,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.get('/me', requireAuth, async (req, res) => {
   try {
-    const wsId = req.workspaceId || req.query.workspace_id;
+    const wsId = req.workspaceId;
     if (!wsId) return res.status(400).json({ error: 'workspace_id required' });
 
     const result = await db.execute({
@@ -57,7 +57,7 @@ router.post('/', requireAuth, requireActivePlan, async (req, res) => {
   if (!req.user?.email_verified) return res.status(403).json({ error: 'email_not_verified' });
 
   try {
-    const wsId = req.workspaceId || req.body.workspace_id;
+    const wsId = req.workspaceId;
     if (!wsId) return res.status(400).json({ error: 'workspace_id required' });
 
     // Проверяем лимит по плану
@@ -107,6 +107,9 @@ router.put('/:id', requireAuth, requireActivePlan, async (req, res) => {
     const existing = await db.execute({ sql: 'SELECT * FROM creators WHERE id = ?', args: [req.params.id] });
     if (!existing.rows.length) return res.status(404).json({ error: 'Not found' });
     const e = existing.rows[0];
+    if (req.workspaceId && String(e.workspace_id) !== String(req.workspaceId)) {
+      return res.status(403).json({ error: 'Нет доступа к этому workspace' });
+    }
     const nextEmail = email ?? e.email;
     const nextUserId = nextEmail?.toLowerCase() === req.user.email?.toLowerCase() ? req.user.id : e.user_id;
     await db.execute({

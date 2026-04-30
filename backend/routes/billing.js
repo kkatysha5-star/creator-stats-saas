@@ -21,6 +21,14 @@ function nextBillingDate() {
   return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 }
 
+function normalizePaymentMeta(value) {
+  return value == null ? null : String(value);
+}
+
+function comparePendingField(metaValue, pendingValue) {
+  return normalizePaymentMeta(metaValue) === normalizePaymentMeta(pendingValue);
+}
+
 // ─── POST /api/billing/create-payment ────────────────────────────────────────
 router.post('/create-payment', async (req, res) => {
   const { email, fullName, planId, workspace_id, agreedToTerms } = req.body;
@@ -83,12 +91,48 @@ router.post('/create-payment', async (req, res) => {
 export async function billingWebhook(req, res) {
   try {
     const { event, object: payment } = req.body;
-    res.json({ ok: true }); // ЮКасса ждёт 200 немедленно
+    if (event !== 'payment.succeeded' || payment.status !== 'succeeded' || payment.paid !== true) {
+      return res.json({ ok: true });
+    }
+    if (!payment?.id) {
+      return res.json({ ok: true });
+    }
 
-    if (event !== 'payment.succeeded' || payment.status !== 'succeeded' || payment.paid !== true) return;
+    const alreadyProcessed = await db.execute({
+      sql: 'SELECT payment_id FROM processed_payments WHERE payment_id = ?',
+      args: [payment.id],
+    });
+    if (alreadyProcessed.rows.length) {
+      return res.json({ ok: true });
+    }
 
     const { email, fullName, planId, workspace_id, isExistingUser } = payment.metadata || {};
-    if (!email || !planId) return;
+    if (!email || !planId) {
+      return res.json({ ok: true });
+    }
+
+    const pendingResult = await db.execute({
+      sql: `SELECT payment_id, email, full_name, plan_id, workspace_id, is_existing_user
+            FROM pending_payments
+            WHERE payment_id = ?`,
+      args: [payment.id],
+    });
+    const pending = pendingResult.rows[0];
+    if (!pending) {
+      console.error('[billing] webhook: pending payment not found', payment.id);
+      return res.json({ ok: true });
+    }
+
+    const mismatchReasons = [];
+    if (!comparePendingField(email.toLowerCase(), pending.email)) mismatchReasons.push('email');
+    if (!comparePendingField(planId, pending.plan_id)) mismatchReasons.push('plan_id');
+    if (pending.is_existing_user != null && !comparePendingField(isExistingUser, pending.is_existing_user)) mismatchReasons.push('is_existing_user');
+    if (pending.workspace_id != null && !comparePendingField(workspace_id, pending.workspace_id)) mismatchReasons.push('workspace_id');
+
+    if (mismatchReasons.length) {
+      console.error('[billing] webhook: pending payment mismatch', payment.id, mismatchReasons.join(', '));
+      return res.json({ ok: true });
+    }
 
     const paymentMethodId = payment.payment_method?.id;
     const nbDate = nextBillingDate();
@@ -185,11 +229,21 @@ export async function billingWebhook(req, res) {
       ).catch(console.error);
     }
 
+    await db.execute({
+      sql: 'INSERT INTO processed_payments (payment_id) VALUES (?)',
+      args: [payment.id],
+    });
+
     // Очищаем pending
     await db.execute({ sql: 'DELETE FROM pending_payments WHERE payment_id = ?', args: [payment.id] }).catch(() => {});
 
+    return res.json({ ok: true });
+
   } catch (e) {
     console.error('[billing] webhook error:', e.message);
+    if (!res.headersSent) {
+      return res.status(200).json({ ok: true });
+    }
   }
 }
 

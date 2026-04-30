@@ -55,6 +55,10 @@ router.get('/:id', requireAuth, async (req, res) => {
 // Получить членов воркспейса
 router.get('/:id/members', requireAuth, async (req, res) => {
   try {
+    if (!req.workspaceId) return res.status(400).json({ error: 'workspace_id required' });
+    if (String(req.workspaceId) !== String(req.params.id)) {
+      return res.status(403).json({ error: 'Нет доступа к этому воркспейсу' });
+    }
     const result = await db.execute({
       sql: `SELECT u.id, u.name, u.email, u.avatar, wm.role, wm.joined_at
             FROM workspace_members wm

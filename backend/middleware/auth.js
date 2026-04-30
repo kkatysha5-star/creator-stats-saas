@@ -25,8 +25,11 @@ export function requireAuth(req, res, next) {
 export function requireRole(roles) {
   return async (req, res, next) => {
     try {
-      const wsId = req.params.id || req.body.workspace_id || req.query.workspace_id || req.workspaceId;
+      const wsId = req.workspaceId;
       if (!wsId) return res.status(400).json({ error: 'workspace_id required' });
+      if (req.params.id && String(req.params.id) !== String(wsId)) {
+        return res.status(403).json({ error: 'Нет доступа к этому воркспейсу' });
+      }
 
       const result = await db.execute({
         sql: 'SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?',
@@ -95,7 +98,7 @@ export async function attachWorkspace(req, res, next) {
     });
 
     if (result.rows.length) {
-      req.workspaceId = wsId;
+      req.workspaceId = String(wsId);
       req.userRole = result.rows[0].role;
       req.workspace = result.rows[0];
     } else {

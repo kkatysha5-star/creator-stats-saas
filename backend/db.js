@@ -214,6 +214,12 @@ export async function initDB() {
       created_at TEXT
     )
   `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS processed_payments (
+      payment_id TEXT PRIMARY KEY,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
   try { await db.execute('ALTER TABLE pending_payments ADD COLUMN workspace_id TEXT'); } catch {}
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN subscription_active INTEGER DEFAULT 0'); } catch {}
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN payment_method_id TEXT'); } catch {}

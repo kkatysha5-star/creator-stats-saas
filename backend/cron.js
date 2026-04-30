@@ -36,7 +36,7 @@ async function getActiveWorkspaceIds() {
   const result = await db.execute('SELECT id, plan, trial_ends_at FROM workspaces');
   const active = new Set();
   for (const ws of result.rows) {
-    if (isPlanActive(ws)) active.add(Number(ws.id));
+    if (isPlanActive(ws)) active.add(String(ws.id));
   }
   _wsCache = active;
   _wsCacheAt = Date.now();
@@ -170,7 +170,7 @@ export async function refreshSmartStats(nowHour = new Date().getUTCHours()) {
   const videos = await getCachedVideos();
 
   const toRefresh = videos.filter(v => {
-    if (v.workspace_id && !activeWsIds.has(Number(v.workspace_id))) return false;
+    if (v.workspace_id && !activeWsIds.has(String(v.workspace_id))) return false;
     return shouldRefresh(v, nowHour);
   });
 
@@ -233,7 +233,7 @@ export async function refreshAllStats() {
   const activeWsIds = await getActiveWorkspaceIds();
   const result = await db.execute('SELECT * FROM videos');
   invalidateVideoCache();
-  const videos = result.rows.filter(v => !v.workspace_id || activeWsIds.has(Number(v.workspace_id)));
+  const videos = result.rows.filter(v => !v.workspace_id || activeWsIds.has(String(v.workspace_id)));
 
   console.log(`[cron] Manual refresh: ${videos.length} videos...`);
 

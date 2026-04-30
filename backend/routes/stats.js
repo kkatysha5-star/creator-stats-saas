@@ -11,7 +11,8 @@ const COOLDOWN_MS = 12 * 60 * 60 * 1000;
 router.get('/summary', async (req, res) => {
   try {
     const { from, to, platform, creator_id } = req.query;
-    const wsId = req.workspaceId || req.query.workspace_id;
+    const wsId = req.workspaceId;
+    if (!wsId) return res.status(400).json({ error: 'workspace_id required' });
     let filter = 'WHERE 1=1';
     const args = [];
     if (wsId) { filter += ' AND v.workspace_id = ?'; args.push(wsId); }
@@ -45,7 +46,8 @@ router.get('/summary', async (req, res) => {
 router.get('/by-creator', async (req, res) => {
   try {
     const { from, to, platform } = req.query;
-    const wsId = req.workspaceId || req.query.workspace_id;
+    const wsId = req.workspaceId;
+    if (!wsId) return res.json([]);
     let filter = 'WHERE 1=1';
     const args = [];
     if (wsId) { filter += ' AND (v.workspace_id = ? OR v.workspace_id IS NULL)'; args.push(wsId); }
@@ -106,7 +108,8 @@ router.post('/refresh-video/:id', requireAuth, requireActivePlan, async (req, re
 
     // Проверяем что видео принадлежит воркспейсу пользователя
     const wsId = req.workspaceId;
-    if (wsId && video.workspace_id && Number(video.workspace_id) !== wsId) {
+    if (!wsId) return res.status(400).json({ error: 'workspace_id required' });
+    if (video.workspace_id && String(video.workspace_id) !== String(wsId)) {
       return res.status(403).json({ error: 'Нет доступа к этому видео' });
     }
 

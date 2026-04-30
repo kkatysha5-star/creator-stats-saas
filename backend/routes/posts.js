@@ -7,7 +7,8 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const { creator_id, from, to } = req.query;
-    const wsId = req.workspaceId || req.query.workspace_id;
+    const wsId = req.workspaceId;
+    if (!wsId) return res.json([]);
     let filter = 'WHERE 1=1';
     const args = [];
     if (wsId) { filter += ' AND p.workspace_id = ?'; args.push(wsId); }
@@ -79,16 +80,24 @@ router.post('/', async (req, res) => {
     const { creator_id, url, published_at } = req.body;
     if (!creator_id) return res.status(400).json({ error: 'creator_id is required' });
     if (!url) return res.status(400).json({ error: 'url is required' });
+    if (!req.user) return res.status(401).json({ error: 'Необходима авторизация' });
+    if (!req.workspaceId) return res.status(400).json({ error: 'workspace_id required' });
 
     const platform = detectPlatform(url);
     if (!platform) return res.status(400).json({ error: 'Unsupported platform URL' });
 
-    const wsId = req.workspaceId || req.body.workspace_id;
-    const postResult = await db.execute({ sql: 'INSERT INTO posts (creator_id, published_at, workspace_id) VALUES (?, ?, ?)', args: [creator_id, published_at || null, wsId || 1] });
+    const creatorCheck = await db.execute({
+      sql: 'SELECT id FROM creators WHERE id = ? AND workspace_id = ?',
+      args: [creator_id, req.workspaceId],
+    });
+    if (!creatorCheck.rows.length) return res.status(403).json({ error: 'Нет доступа к этому креатору' });
+
+    const wsId = req.workspaceId;
+    const postResult = await db.execute({ sql: 'INSERT INTO posts (creator_id, published_at, workspace_id) VALUES (?, ?, ?)', args: [creator_id, published_at || null, wsId] });
     const postId = postResult.lastInsertRowid;
 
     const video_id = extractVideoId(url, platform);
-    const vidResult = await db.execute({ sql: 'INSERT INTO videos (post_id, creator_id, platform, url, video_id, published_at, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [postId, creator_id, platform, url, video_id || null, published_at || null, wsId || 1] });
+    const vidResult = await db.execute({ sql: 'INSERT INTO videos (post_id, creator_id, platform, url, video_id, published_at, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [postId, creator_id, platform, url, video_id || null, published_at || null, wsId] });
     const videoDbId = vidResult.lastInsertRowid;
 
     const videoRow = await db.execute({ sql: 'SELECT * FROM videos WHERE id = ?', args: [videoDbId] });
@@ -111,9 +120,14 @@ router.post('/', async (req, res) => {
 router.post('/:id/videos', async (req, res) => {
   try {
     const { url } = req.body;
+    if (!req.user) return res.status(401).json({ error: 'Необходима авторизация' });
+    if (!req.workspaceId) return res.status(400).json({ error: 'workspace_id required' });
     const postRow = await db.execute({ sql: 'SELECT * FROM posts WHERE id = ?', args: [req.params.id] });
     if (!postRow.rows.length) return res.status(404).json({ error: 'Post not found' });
     const post = postRow.rows[0];
+    if (String(post.workspace_id) !== String(req.workspaceId)) {
+      return res.status(403).json({ error: 'Нет доступа к этому workspace' });
+    }
 
     const platform = detectPlatform(url);
     if (!platform) return res.status(400).json({ error: 'Unsupported platform URL' });
@@ -122,8 +136,8 @@ router.post('/:id/videos', async (req, res) => {
     if (existing.rows.length) return res.status(409).json({ error: `Уже есть ссылка на ${platform}` });
 
     const video_id = extractVideoId(url, platform);
-    const wsId = req.workspaceId || post.workspace_id;
-    const vidResult = await db.execute({ sql: 'INSERT INTO videos (post_id, creator_id, platform, url, video_id, published_at, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [post.id, post.creator_id, platform, url, video_id || null, post.published_at || null, wsId || 1] });
+    const wsId = req.workspaceId;
+    const vidResult = await db.execute({ sql: 'INSERT INTO videos (post_id, creator_id, platform, url, video_id, published_at, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [post.id, post.creator_id, platform, url, video_id || null, post.published_at || null, wsId] });
     const videoDbId = vidResult.lastInsertRowid;
 
     const videoRow = await db.execute({ sql: 'SELECT * FROM videos WHERE id = ?', args: [videoDbId] });
@@ -146,6 +160,13 @@ router.post('/:id/videos', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { title, published_at } = req.body;
+    if (!req.user) return res.status(401).json({ error: 'Необходима авторизация' });
+    if (!req.workspaceId) return res.status(400).json({ error: 'workspace_id required' });
+    const postCheck = await db.execute({ sql: 'SELECT workspace_id FROM posts WHERE id = ?', args: [req.params.id] });
+    if (!postCheck.rows.length) return res.status(404).json({ error: 'Post not found' });
+    if (String(postCheck.rows[0].workspace_id) !== String(req.workspaceId)) {
+      return res.status(403).json({ error: 'Нет доступа к этому workspace' });
+    }
     await db.execute({ sql: 'UPDATE posts SET title = ?, published_at = ? WHERE id = ?', args: [title, published_at, req.params.id] });
     const result = await db.execute({ sql: 'SELECT * FROM posts WHERE id = ?', args: [req.params.id] });
     res.json(result.rows[0]);
@@ -154,6 +175,13 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
+    if (!req.user) return res.status(401).json({ error: 'Необходима авторизация' });
+    if (!req.workspaceId) return res.status(400).json({ error: 'workspace_id required' });
+    const postCheck = await db.execute({ sql: 'SELECT workspace_id FROM posts WHERE id = ?', args: [req.params.id] });
+    if (!postCheck.rows.length) return res.status(404).json({ error: 'Post not found' });
+    if (String(postCheck.rows[0].workspace_id) !== String(req.workspaceId)) {
+      return res.status(403).json({ error: 'Нет доступа к этому workspace' });
+    }
     // Удаляем видео, привязанные к этому посту
     await db.execute({ sql: 'DELETE FROM videos WHERE post_id = ?', args: [req.params.id] });
     await db.execute({ sql: 'DELETE FROM posts WHERE id = ?', args: [req.params.id] });
@@ -163,6 +191,13 @@ router.delete('/:id', async (req, res) => {
 
 router.delete('/:id/videos/:videoId', async (req, res) => {
   try {
+    if (!req.user) return res.status(401).json({ error: 'Необходима авторизация' });
+    if (!req.workspaceId) return res.status(400).json({ error: 'workspace_id required' });
+    const postCheck = await db.execute({ sql: 'SELECT workspace_id FROM posts WHERE id = ?', args: [req.params.id] });
+    if (!postCheck.rows.length) return res.status(404).json({ error: 'Post not found' });
+    if (String(postCheck.rows[0].workspace_id) !== String(req.workspaceId)) {
+      return res.status(403).json({ error: 'Нет доступа к этому workspace' });
+    }
     await db.execute({ sql: 'DELETE FROM videos WHERE id = ? AND post_id = ?', args: [req.params.videoId, req.params.id] });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }

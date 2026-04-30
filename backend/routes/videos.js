@@ -9,7 +9,8 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const { creator_id, platform, from, to } = req.query;
-    const wsId = req.workspaceId || req.query.workspace_id;
+    const wsId = req.workspaceId;
+    if (!wsId) return res.json([]);
     let filter = 'WHERE 1=1';
     const args = [];
     if (wsId) { filter += ' AND v.workspace_id = ?'; args.push(wsId); }
@@ -40,15 +41,22 @@ router.post('/', requireAuth, requireActivePlan, async (req, res) => {
     const { url, creator_id, platform: forcedPlatform, title, published_at } = req.body;
     if (!url) return res.status(400).json({ error: 'url is required' });
     if (!creator_id) return res.status(400).json({ error: 'creator_id is required' });
+    if (!req.workspaceId) return res.status(400).json({ error: 'workspace_id required' });
 
     const platform = forcedPlatform || detectPlatform(url);
     if (!platform) return res.status(400).json({ error: 'Cannot detect platform' });
     const video_id = extractVideoId(url, platform);
 
-    const wsId = req.workspaceId || req.body.workspace_id;
+    const creatorCheck = await db.execute({
+      sql: 'SELECT id FROM creators WHERE id = ? AND workspace_id = ?',
+      args: [creator_id, req.workspaceId],
+    });
+    if (!creatorCheck.rows.length) return res.status(403).json({ error: 'Нет доступа к этому креатору' });
+
+    const wsId = req.workspaceId;
     const result = await db.execute({
       sql: 'INSERT INTO videos (creator_id, platform, url, video_id, title, published_at, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      args: [creator_id, platform, url, video_id || null, title || null, published_at || null, wsId || 1]
+      args: [creator_id, platform, url, video_id || null, title || null, published_at || null, wsId]
     });
     const videoDbId = result.lastInsertRowid;
 
@@ -100,7 +108,8 @@ router.post('/:id/refresh', requireAuth, requireActivePlan, async (req, res) => 
 
     // Проверяем принадлежность воркспейсу
     const wsId = req.workspaceId;
-    if (wsId && video.workspace_id && Number(video.workspace_id) !== wsId) {
+    if (!wsId) return res.status(400).json({ error: 'workspace_id required' });
+    if (video.workspace_id && String(video.workspace_id) !== String(wsId)) {
       return res.status(403).json({ error: 'Нет доступа к этому видео' });
     }
 
@@ -122,6 +131,12 @@ router.post('/:id/refresh', requireAuth, requireActivePlan, async (req, res) => 
 
 router.delete('/:id', requireAuth, requireActivePlan, async (req, res) => {
   try {
+    if (!req.workspaceId) return res.status(400).json({ error: 'workspace_id required' });
+    const videoRow = await db.execute({ sql: 'SELECT workspace_id FROM videos WHERE id = ?', args: [req.params.id] });
+    if (!videoRow.rows.length) return res.status(404).json({ error: 'Not found' });
+    if (String(videoRow.rows[0].workspace_id) !== String(req.workspaceId)) {
+      return res.status(403).json({ error: 'Нет доступа к этому видео' });
+    }
     await db.execute({ sql: 'DELETE FROM videos WHERE id = ?', args: [req.params.id] });
     invalidateVideoCache();
     res.json({ ok: true });
