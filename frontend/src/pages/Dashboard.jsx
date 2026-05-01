@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta, planColor, pluralVideos, reachScheduleStatus } from '../lib/utils.js';
-import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Loader, Empty, ProgressBar, CircularProgress, CompareSelector } from '../components/UI.jsx';
+import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Loader, Empty, ProgressBar, CircularProgress, CompareSelector, COMPARE_OPTIONS } from '../components/UI.jsx';
 import { useAuth } from '../App.jsx';
 import styles from './Dashboard.module.css';
+
+const normalizeSummary = (res) => (res && typeof res === 'object' && !Array.isArray(res) ? res : {});
+const normalizeList = (res) => Array.isArray(res) ? res : [];
 
 export default function Dashboard() {
   const { auth } = useAuth();
@@ -24,6 +27,7 @@ export default function Dashboard() {
   const [compareCustomFrom, setCompareCustomFrom] = useState('');
   const [compareCustomTo, setCompareCustomTo] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [activeMetric, setActiveMetric] = useState(null);
   const [rankTab, setRankTab] = useState('views');
   const navigate = useNavigate();
@@ -31,6 +35,7 @@ export default function Dashboard() {
   const load = useCallback(async () => {
     if (period === 'custom' && !customFrom && !customTo) return;
     setLoading(true);
+    setLoadError('');
     try {
       const dates = periodToDates(period, customFrom, customTo);
       const prevDates = getCompareDates(compareWith, period, customFrom, customTo, compareCustomFrom, compareCustomTo);
@@ -55,20 +60,28 @@ export default function Dashboard() {
 
       const results = await Promise.all(requests);
       const [ytRes, ttRes, igRes, crRes] = results;
-      setSummaryByPlat({ youtube: ytRes, tiktok: ttRes, instagram: igRes });
-      setByCreator(crRes);
+      setSummaryByPlat({
+        youtube: normalizeSummary(ytRes),
+        tiktok: normalizeSummary(ttRes),
+        instagram: normalizeSummary(igRes),
+      });
+      setByCreator(normalizeList(crRes));
 
       if (prevDates) {
         const [,,, , pYt, pTt, pIg, pCr] = results;
-        setPrevSummaryByPlat({ youtube: pYt, tiktok: pTt, instagram: pIg });
-        setPrevByCreator(pCr || []);
+        setPrevSummaryByPlat({
+          youtube: normalizeSummary(pYt),
+          tiktok: normalizeSummary(pTt),
+          instagram: normalizeSummary(pIg),
+        });
+        setPrevByCreator(normalizeList(pCr));
       } else {
         setPrevSummaryByPlat({});
         setPrevByCreator([]);
       }
 
       if (isPro) {
-        const periods = results[results.length - 1] || [];
+        const periods = normalizeList(results[results.length - 1]);
         const map = {};
         periods.forEach(p => {
           const cid = p.creator_id;
@@ -78,6 +91,12 @@ export default function Dashboard() {
       }
     } catch (e) {
       console.error(e);
+      setSummaryByPlat({});
+      setPrevSummaryByPlat({});
+      setByCreator([]);
+      setPrevByCreator([]);
+      setFunnelPayouts({});
+      setLoadError(e?.message || 'Не удалось загрузить данные дашборда');
     } finally {
       setLoading(false);
     }
@@ -181,7 +200,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {loading ? <Loader rows={5} /> : (
+      {loading ? <Loader rows={5} /> : loadError ? (
+        <Empty icon="⚠️" text="Не удалось загрузить дашборд" sub={loadError} />
+      ) : (
         <div className="fade-in">
 
           {/* ── Метрики ──────────────────────────────────────────── */}
