@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api.js';
 import { fmtNum, fmtEr, platformMeta, periodToDates } from '../lib/utils.js';
 import { PageHeader, PeriodTabs, PlatformBadge, Avatar, Btn, Input, Select, Modal, Loader, Empty, DatePicker } from '../components/UI.jsx';
+import { useAuth } from '../App.jsx';
+import { useSavedPeriod } from '../lib/useSavedPeriod.js';
 import styles from './Posts.module.css';
 
 export default function Posts() {
-  const [period, setPeriod] = useState('month');
+  const { auth } = useAuth();
+  const { period, customFrom, customTo, setPeriod, setCustomRange, resetPeriod, ready: periodReady } = useSavedPeriod(auth);
   const [creatorId, setCreatorId] = useState('');
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
   const [posts, setPosts] = useState([]);
   const [creators, setCreators] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +21,7 @@ export default function Posts() {
   const [sortBy, setSortBy] = useState('date');
 
   const load = useCallback(async () => {
+    if (!periodReady) return;
     if (period === 'custom' && !customFrom && !customTo) return;
     setLoading(true);
     try {
@@ -32,7 +34,7 @@ export default function Posts() {
       setCreators(crs);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [period, creatorId, customFrom, customTo]);
+  }, [periodReady, period, creatorId, customFrom, customTo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -82,7 +84,7 @@ export default function Posts() {
       </PageHeader>
 
       <div className={styles.toolbar}>
-        <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t); }} />
+        <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomChange={setCustomRange} onReset={resetPeriod} />
         <select className={styles.filterSelect} value={creatorId} onChange={e => setCreatorId(e.target.value)}>
           <option value="">Все креаторы</option>
           {creators.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}

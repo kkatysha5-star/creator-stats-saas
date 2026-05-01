@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api.js';
 import { fmtNum, fmtEr, platformMeta, periodToDates } from '../lib/utils.js';
+import { useAuth } from '../App.jsx';
+import { useSavedPeriod } from '../lib/useSavedPeriod.js';
 import {
   PageHeader, PeriodTabs, PlatformBadge, Avatar, Btn, Input, Select,
   Modal, Loader, Empty, DatePicker
@@ -15,12 +17,11 @@ const SORTS = [
 ];
 
 export default function Videos() {
-  const [period, setPeriod] = useState('month');
+  const { auth } = useAuth();
+  const { period, customFrom, customTo, setPeriod, setCustomRange, resetPeriod, ready: periodReady } = useSavedPeriod(auth);
   const [platform, setPlatform] = useState('');
   const [creatorId, setCreatorId] = useState('');
   const [sort, setSort] = useState('date');
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
   const [videos, setVideos] = useState([]);
   const [creators, setCreators] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +30,7 @@ export default function Videos() {
   const [refreshErrors, setRefreshErrors] = useState({});
 
   const load = useCallback(async () => {
+    if (!periodReady) return;
     if (period === 'custom' && !customFrom && !customTo) return;
     setLoading(true);
     try {
@@ -41,7 +43,7 @@ export default function Videos() {
       setCreators(crs);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [period, platform, creatorId, customFrom, customTo]);
+  }, [periodReady, period, platform, creatorId, customFrom, customTo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -78,7 +80,7 @@ export default function Videos() {
       </PageHeader>
 
       <div className={styles.toolbar}>
-        <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t); }} />
+        <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomChange={setCustomRange} onReset={resetPeriod} />
         <select className={styles.filterSelect} value={platform} onChange={e => setPlatform(e.target.value)}>
           <option value="">Все платформы</option>
           <option value="youtube">YouTube</option>
@@ -267,4 +269,3 @@ function AddVideoModal({ creators, onClose, onSaved }) {
     </Modal>
   );
 }
-

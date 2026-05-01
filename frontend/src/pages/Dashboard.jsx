@@ -4,6 +4,7 @@ import { api } from '../lib/api.js';
 import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta, planColor, pluralVideos, reachScheduleStatus } from '../lib/utils.js';
 import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Loader, Empty, ProgressBar, CircularProgress, CompareSelector, COMPARE_OPTIONS } from '../components/UI.jsx';
 import { useAuth } from '../App.jsx';
+import { useSavedPeriod } from '../lib/useSavedPeriod.js';
 import styles from './Dashboard.module.css';
 
 const normalizeSummary = (res) => (res && typeof res === 'object' && !Array.isArray(res) ? res : {});
@@ -14,10 +15,8 @@ export default function Dashboard() {
   const workspace = auth?.workspaces?.[0];
   const isPro = workspace?.plan === 'pro';
 
-  const [period, setPeriod] = useState('month');
+  const { period, customFrom, customTo, setPeriod, setCustomRange, resetPeriod, ready: periodReady } = useSavedPeriod(auth);
   const [platforms, setPlatforms] = useState(new Set(['youtube', 'tiktok', 'instagram']));
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
   const [summaryByPlat, setSummaryByPlat] = useState({});
   const [prevSummaryByPlat, setPrevSummaryByPlat] = useState({});
   const [byCreator, setByCreator] = useState([]);
@@ -33,6 +32,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const load = useCallback(async () => {
+    if (!periodReady) return;
     if (period === 'custom' && !customFrom && !customTo) return;
     setLoading(true);
     setLoadError('');
@@ -100,7 +100,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [period, customFrom, customTo, compareWith, compareCustomFrom, compareCustomTo, isPro]);
+  }, [periodReady, period, customFrom, customTo, compareWith, compareCustomFrom, compareCustomTo, isPro]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -177,7 +177,7 @@ export default function Dashboard() {
 
       <div className={styles.toolbar}>
         <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo}
-          onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t); }} />
+          onCustomChange={setCustomRange} onReset={resetPeriod} />
         <CompareSelector
           value={compareWith} onChange={setCompareWith}
           customFrom={compareCustomFrom} customTo={compareCustomTo}

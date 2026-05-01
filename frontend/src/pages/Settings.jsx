@@ -38,6 +38,8 @@ export default function Settings() {
   const [inviteLabel, setInviteLabel] = useState('');
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [inviteToDelete, setInviteToDelete] = useState(null);
+  const [deletingInvite, setDeletingInvite] = useState(false);
 
   const isPro = workspace?.plan === 'pro';
 
@@ -178,12 +180,19 @@ export default function Settings() {
     }
   };
 
-  const handleDeleteInvite = async (inviteId) => {
-    if (!confirm('Удалить эту ссылку?')) return;
+  const openDeleteInviteModal = (inviteId) => {
+    setInviteToDelete(inviteId);
+  };
+
+  const confirmDeleteInvite = async () => {
+    if (!inviteToDelete) return;
+    setDeletingInvite(true);
     try {
-      await api.deleteInvite(workspace.id, inviteId);
-      setInvites(prev => prev.filter(i => i.id !== inviteId));
+      await api.deleteInvite(workspace.id, inviteToDelete);
+      setInvites(prev => prev.filter(i => i.id !== inviteToDelete));
+      setInviteToDelete(null);
     } catch (e) { alert(e.message); }
+    finally { setDeletingInvite(false); }
   };
 
   const handleCopy = (inv) => {
@@ -483,6 +492,31 @@ export default function Settings() {
           </Modal>
         )}
 
+        {inviteToDelete && (
+          <Modal
+            title="Удалить ссылку?"
+            onClose={() => setInviteToDelete(null)}
+            footer={
+              <>
+                <Btn onClick={() => setInviteToDelete(null)} disabled={deletingInvite}>Отмена</Btn>
+                <Btn
+                  variant="primary"
+                  style={{ background: '#ef4444' }}
+                  onClick={confirmDeleteInvite}
+                  loading={deletingInvite}
+                  disabled={deletingInvite}
+                >
+                  Удалить
+                </Btn>
+              </>
+            }
+          >
+            <p style={{ fontSize: 14, color: 'var(--text2)', margin: 0, lineHeight: 1.6 }}>
+              После удаления по этой ссылке больше нельзя будет присоединиться.
+            </p>
+          </Modal>
+        )}
+
         {/* Воркспейс */}
         {workspace && (
           <div className={styles.section}>
@@ -625,7 +659,7 @@ export default function Settings() {
                     invite={inv}
                     copied={copiedId === inv.id}
                     onCopy={() => handleCopy(inv)}
-                    onDelete={() => handleDeleteInvite(inv.id)}
+                    onDelete={() => openDeleteInviteModal(inv.id)}
                   />
                 ))}
               </div>

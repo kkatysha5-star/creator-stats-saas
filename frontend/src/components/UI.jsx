@@ -409,7 +409,8 @@ export const PERIODS = [
   { id: 'custom',    label: 'Период...' },
 ];
 
-export function PeriodTabs({ value, onChange, customFrom, customTo, onCustomChange }) {
+export function PeriodTabs({ value, onChange, customFrom, customTo, onCustomChange, onReset }) {
+  const canReset = !!onReset && (value !== 'month' || !!customFrom || !!customTo);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
       <div className={styles.tabs}>
@@ -433,6 +434,24 @@ export function PeriodTabs({ value, onChange, customFrom, customTo, onCustomChan
             placeholder="По"
           />
         </div>
+      )}
+      {canReset && (
+        <button
+          onClick={onReset}
+          style={{
+            background: 'var(--bg3)',
+            border: '1px solid var(--border2)',
+            borderRadius: 'var(--radius-pill)',
+            color: 'var(--text3)',
+            fontFamily: 'var(--font)',
+            fontSize: 12,
+            fontWeight: 600,
+            padding: '6px 12px',
+            cursor: 'pointer',
+          }}
+        >
+          Сбросить период
+        </button>
       )}
     </div>
   );
