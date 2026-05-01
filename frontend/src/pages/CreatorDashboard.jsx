@@ -3,18 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { fmtNum, fmtEr, platformMeta, periodToDates, getCompareDates, calcDelta, planColor, pluralVideos, reachScheduleStatus } from '../lib/utils.js';
 import { PageHeader, MetricCard, PeriodTabs, PlatformDot, Avatar, Btn, Input, Select, Modal, Loader, Empty, PlatformBadge, CompareSelector, DatePicker } from '../components/UI.jsx';
+import { useAuth } from '../App.jsx';
+import { useSavedPeriod } from '../lib/useSavedPeriod.js';
 import styles from './CreatorDashboard.module.css';
 
 export default function CreatorDashboard() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { auth } = useAuth();
 
-  const [period, setPeriod] = useState('month');
+  const { period, customFrom, customTo, setPeriod, setCustomRange, resetPeriod, ready: periodReady } = useSavedPeriod(auth);
   const [compareWith, setCompareWith] = useState('prev_period');
   const [compareCustomFrom, setCompareCustomFrom] = useState('');
   const [compareCustomTo, setCompareCustomTo] = useState('');
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
   const [creator, setCreator] = useState(null);
   const [summaryByPlat, setSummaryByPlat] = useState({});
   const [prevSummaryByPlat, setPrevSummaryByPlat] = useState({});
@@ -22,6 +23,7 @@ export default function CreatorDashboard() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    if (!periodReady) return;
     if (period === 'custom' && !customFrom && !customTo) return;
     setLoading(true);
     try {
@@ -58,7 +60,7 @@ export default function CreatorDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [id, period, customFrom, customTo, compareWith, compareCustomFrom, compareCustomTo]);
+  }, [id, periodReady, period, customFrom, customTo, compareWith, compareCustomFrom, compareCustomTo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -134,7 +136,7 @@ export default function CreatorDashboard() {
       </PageHeader>
 
       <div className={styles.toolbar}>
-        <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t); }} />
+        <PeriodTabs value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomChange={setCustomRange} onReset={resetPeriod} />
         <CompareSelector
           value={compareWith} onChange={setCompareWith}
           customFrom={compareCustomFrom} customTo={compareCustomTo}
