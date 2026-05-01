@@ -92,18 +92,33 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     // Apply saved theme immediately
     const saved = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', saved);
 
-    api.getMe().then(data => {
-      const savedWorkspaceId = api.getWorkspaceId();
-      const activeWorkspace = data?.workspaces?.find(w => String(w.id) === String(savedWorkspaceId))
-        || data?.workspaces?.[0];
-      if (activeWorkspace) api.setWorkspace(activeWorkspace.id);
-      else api.setWorkspace(null);
-      setAuth(withActiveWorkspaceFirst(data, activeWorkspace?.id));
-    }).catch(() => setAuth(false)).finally(() => setLoading(false));
+    async function loadAuth() {
+      try {
+        const data = await api.getMe();
+        if (cancelled) return;
+        const savedWorkspaceId = api.getWorkspaceId();
+        const activeWorkspace = data?.workspaces?.find(w => String(w.id) === String(savedWorkspaceId))
+          || data?.workspaces?.[0];
+        if (activeWorkspace) api.setWorkspace(activeWorkspace.id);
+        else api.setWorkspace(null);
+        setAuth(withActiveWorkspaceFirst(data, activeWorkspace?.id));
+      } catch {
+        if (cancelled) return;
+        api.setWorkspace(null);
+        setAuth(false);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadAuth();
+    return () => { cancelled = true; };
   }, []);
 
   if (loading) {

@@ -36,11 +36,30 @@ app.use(helmet({
   contentSecurityPolicy: false, // отключаем CSP — мешает SPA
 }));
 
-// CORS — только свой домен
-const allowedOrigin = process.env.FRONTEND_URL;
+// CORS — только свои домены
+function normalizeOrigin(value) {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return value.replace(/\/+$/, '');
+  }
+}
+
+const configuredOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map(origin => normalizeOrigin(origin.trim()))
+  .filter(Boolean);
+const allowedOrigins = new Set([
+  'https://app.cmetrika.com',
+  'https://cmetrika.com',
+  'https://www.cmetrika.com',
+  ...configuredOrigins,
+]);
+
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || !allowedOrigin || origin === allowedOrigin) return cb(null, true);
+    if (!origin || allowedOrigins.has(normalizeOrigin(origin))) return cb(null, true);
     cb(new Error('CORS: origin not allowed'));
   },
   credentials: true,
