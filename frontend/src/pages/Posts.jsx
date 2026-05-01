@@ -19,6 +19,8 @@ export default function Posts() {
   const [refreshingIds, setRefreshingIds] = useState(new Set());
   const [refreshErrors, setRefreshErrors] = useState({});
   const [sortBy, setSortBy] = useState('date');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!periodReady) return;
@@ -38,16 +40,29 @@ export default function Posts() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleDeletePost = async (id) => {
-    if (!confirm('Удалить ролик и все его ссылки?')) return;
-    await api.deletePost(id);
-    setPosts(p => p.filter(x => x.id !== id));
+  const openDeletePostModal = (id) => {
+    setDeleteTarget({ type: 'post', postId: id });
   };
 
-  const handleDeleteVideo = async (postId, videoId) => {
-    if (!confirm('Удалить эту ссылку?')) return;
-    await api.deleteVideoFromPost(postId, videoId);
-    load();
+  const openDeleteVideoModal = (postId, videoId) => {
+    setDeleteTarget({ type: 'video', postId, videoId });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      if (deleteTarget.type === 'post') {
+        await api.deletePost(deleteTarget.postId);
+        setPosts(p => p.filter(x => x.id !== deleteTarget.postId));
+      } else {
+        await api.deleteVideoFromPost(deleteTarget.postId, deleteTarget.videoId);
+        await load();
+      }
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleRefreshVideo = async (videoId) => {
@@ -107,9 +122,9 @@ export default function Posts() {
                 num={sortedPosts.length - idx}
                 expanded={expandedId === post.id}
                 onToggle={() => setExpandedId(expandedId === post.id ? null : post.id)}
-                onDelete={() => handleDeletePost(post.id)}
+                onDelete={() => openDeletePostModal(post.id)}
                 onAddVideo={() => { setAddingVideoTo(post); window.dispatchEvent(new CustomEvent('tour:platform-form-opened')); }}
-                onDeleteVideo={(videoId) => handleDeleteVideo(post.id, videoId)}
+                onDeleteVideo={(videoId) => openDeleteVideoModal(post.id, videoId)}
                 onRefreshVideo={handleRefreshVideo}
                 onRefreshAll={() => handleRefreshAll(post.videos)}
                 refreshingIds={refreshingIds}
@@ -141,6 +156,32 @@ export default function Posts() {
             window.dispatchEvent(new CustomEvent('tour:platform-added'));
           }}
         />
+      )}
+      {deleteTarget && (
+        <Modal
+          title={deleteTarget.type === 'post' ? 'Удалить ролик?' : 'Удалить ссылку?'}
+          onClose={() => !deleting && setDeleteTarget(null)}
+          footer={
+            <>
+              <Btn onClick={() => setDeleteTarget(null)} disabled={deleting}>Отмена</Btn>
+              <Btn
+                variant="primary"
+                style={{ background: '#ef4444' }}
+                onClick={confirmDelete}
+                loading={deleting}
+                disabled={deleting}
+              >
+                Удалить
+              </Btn>
+            </>
+          }
+        >
+          <p style={{ fontSize: 14, color: 'var(--text2)', margin: 0, lineHeight: 1.6 }}>
+            {deleteTarget.type === 'post'
+              ? 'Ролик и все его ссылки будут удалены.'
+              : 'Эта ссылка будет удалена из ролика.'}
+          </p>
+        </Modal>
       )}
     </div>
   );

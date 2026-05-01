@@ -28,6 +28,8 @@ export default function Videos() {
   const [showAdd, setShowAdd] = useState(false);
   const [refreshingId, setRefreshingId] = useState(null);
   const [refreshErrors, setRefreshErrors] = useState({});
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!periodReady) return;
@@ -67,10 +69,20 @@ export default function Videos() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Удалить видео?')) return;
-    await api.deleteVideo(id);
-    setVideos(v => v.filter(x => x.id !== id));
+  const openDeleteVideoModal = (id) => {
+    setDeleteTarget(id);
+  };
+
+  const confirmDeleteVideo = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.deleteVideo(deleteTarget);
+      setVideos(v => v.filter(x => x.id !== deleteTarget));
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -119,7 +131,7 @@ export default function Videos() {
                 refreshing={refreshingId === v.id}
                 refreshError={refreshErrors[v.id]}
                 onRefresh={() => handleRefresh(v.id)}
-                onDelete={() => handleDelete(v.id)}
+                onDelete={() => openDeleteVideoModal(v.id)}
               />
             ))}
           </div>
@@ -136,6 +148,30 @@ export default function Videos() {
             window.dispatchEvent(new CustomEvent('tour:video-added'));
           }}
         />
+      )}
+      {deleteTarget && (
+        <Modal
+          title="Удалить видео?"
+          onClose={() => !deleting && setDeleteTarget(null)}
+          footer={
+            <>
+              <Btn onClick={() => setDeleteTarget(null)} disabled={deleting}>Отмена</Btn>
+              <Btn
+                variant="primary"
+                style={{ background: '#ef4444' }}
+                onClick={confirmDeleteVideo}
+                loading={deleting}
+                disabled={deleting}
+              >
+                Удалить
+              </Btn>
+            </>
+          }
+        >
+          <p style={{ fontSize: 14, color: 'var(--text2)', margin: 0, lineHeight: 1.6 }}>
+            Видео будет удалено из списка.
+          </p>
+        </Modal>
       )}
     </div>
   );

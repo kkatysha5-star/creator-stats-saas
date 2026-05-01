@@ -78,6 +78,8 @@ export default function Creators({ startNew = false }) {
   const [editing, setEditing] = useState(null);
   const [inviting, setInviting] = useState(null);
   const [inviteUrl, setInviteUrl] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const atLimit = creators.length >= limit;
 
@@ -102,10 +104,20 @@ export default function Creators({ startNew = false }) {
     if (startNew && role === 'creator') setShowAdd(true);
   }, [startNew, role]);
 
-  const handleDelete = async (id) => {
-    if (!confirm('Удалить креатора и все его видео?')) return;
-    await api.deleteCreator(id);
-    setCreators(c => c.filter(x => x.id !== id));
+  const openDeleteCreatorModal = (creator) => {
+    setDeleteTarget(creator);
+  };
+
+  const confirmDeleteCreator = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.deleteCreator(deleteTarget.id);
+      setCreators(c => c.filter(x => x.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleInvite = async (creator) => {
@@ -192,7 +204,7 @@ export default function Creators({ startNew = false }) {
                     <div className={styles.cardActions}>
                       <button className={styles.iconBtn} onClick={() => handleInvite(c)} data-tour="invite-creator-btn">✉ Пригласить</button>
                       <button className={styles.iconBtn} onClick={() => setEditing(c)}>✎ Изменить</button>
-                      <button className={styles.iconBtn + ' ' + styles.del} onClick={() => handleDelete(c.id)}>✕ Удалить</button>
+                      <button className={styles.iconBtn + ' ' + styles.del} onClick={() => openDeleteCreatorModal(c)}>✕ Удалить</button>
                     </div>
                   )}
 
@@ -248,6 +260,30 @@ export default function Creators({ startNew = false }) {
           inviteUrl={inviteUrl}
           onClose={() => { setInviting(null); setInviteUrl(''); }}
         />
+      )}
+      {deleteTarget && (
+        <Modal
+          title="Удалить креатора?"
+          onClose={() => !deleting && setDeleteTarget(null)}
+          footer={
+            <>
+              <Btn onClick={() => setDeleteTarget(null)} disabled={deleting}>Отмена</Btn>
+              <Btn
+                variant="primary"
+                style={{ background: '#ef4444' }}
+                onClick={confirmDeleteCreator}
+                loading={deleting}
+                disabled={deleting}
+              >
+                Удалить
+              </Btn>
+            </>
+          }
+        >
+          <p style={{ fontSize: 14, color: 'var(--text2)', margin: 0, lineHeight: 1.6 }}>
+            Креатор «{deleteTarget.name}» и все его видео будут удалены.
+          </p>
+        </Modal>
       )}
     </div>
   );

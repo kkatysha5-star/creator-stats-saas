@@ -89,6 +89,8 @@ function FunnelInner() {
   const [showAddCreator, setShowAddCreator] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState('');
   const [compareTo, setCompareTo] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -116,6 +118,30 @@ function FunnelInner() {
   }, [canEdit, selectedLabel]);
 
   useEffect(() => { load(); }, [load]);
+
+  const openDeletePeriodModal = (period) => {
+    setDeleteTarget({ type: 'period', id: period.id });
+  };
+
+  const openDeleteSnapshotModal = (snapshotId) => {
+    setDeleteTarget({ type: 'snapshot', id: snapshotId });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      if (deleteTarget.type === 'period') {
+        await api.deleteFunnelPeriod(deleteTarget.id);
+      } else {
+        await api.deleteFunnelSnapshot(deleteTarget.id);
+      }
+      setDeleteTarget(null);
+      await load();
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Уникальные метки периодов (месяцы) — для переключателя
   const labels = useMemo(() => {
@@ -267,11 +293,7 @@ function FunnelInner() {
                           <div className={styles.actions}>
                             <button className={styles.iconBtn} onClick={() => setShowSnapshot(p)} title="Внести данные">+</button>
                             <button className={styles.iconBtn} onClick={() => setShowEdit(p)} title="Редактировать">✎</button>
-                            <button className={styles.iconBtn + ' ' + styles.del} onClick={async () => {
-                              if (!confirm('Удалить период?')) return;
-                              await api.deleteFunnelPeriod(p.id);
-                              load();
-                            }} title="Удалить">✕</button>
+                            <button className={styles.iconBtn + ' ' + styles.del} onClick={() => openDeletePeriodModal(p)} title="Удалить">✕</button>
                           </div>
                         </td>
                       )}
@@ -307,13 +329,36 @@ function FunnelInner() {
         <div className={styles.historySection}>
           <h2 className={styles.sectionTitle}>История записей</h2>
           {currentPeriods.map(p => p.snapshots?.length > 0 && (
-            <HistoryBlock key={p.id} period={p} canEdit={canEdit} onDelete={async (sid) => {
-              if (!confirm('Удалить запись?')) return;
-              await api.deleteFunnelSnapshot(sid);
-              load();
-            }} />
+            <HistoryBlock key={p.id} period={p} canEdit={canEdit} onDelete={openDeleteSnapshotModal} />
           ))}
         </div>
+      )}
+
+      {deleteTarget && (
+        <Modal
+          title={deleteTarget.type === 'period' ? 'Удалить период?' : 'Удалить запись?'}
+          onClose={() => !deleting && setDeleteTarget(null)}
+          footer={
+            <>
+              <Btn onClick={() => setDeleteTarget(null)} disabled={deleting}>Отмена</Btn>
+              <Btn
+                variant="primary"
+                style={{ background: '#ef4444' }}
+                onClick={confirmDelete}
+                loading={deleting}
+                disabled={deleting}
+              >
+                Удалить
+              </Btn>
+            </>
+          }
+        >
+          <p style={{ fontSize: 14, color: 'var(--text2)', margin: 0, lineHeight: 1.6 }}>
+            {deleteTarget.type === 'period'
+              ? 'Период будет удален из воронки.'
+              : 'Запись истории будет удалена.'}
+          </p>
+        </Modal>
       )}
 
       {showImport && <ImportModal creators={creators} onClose={() => setShowImport(false)} onSaved={() => { setShowImport(false); load(); }} />}
