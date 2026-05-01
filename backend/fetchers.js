@@ -190,8 +190,22 @@ export async function fetchInstagramStats(shortcode, originalUrl) {
   return data;
 }
 
+const statsFetches = globalThis.__statsFetches || new Map();
+globalThis.__statsFetches = statsFetches;
+
+function statsFetchKey(video) {
+  const platform = video?.platform || 'unknown';
+  const url = video?.url || '';
+  const videoId = video?.video_id
+    || (platform === 'youtube' ? extractYoutubeId(url) : null)
+    || (platform === 'tiktok' ? extractTiktokId(url) : null)
+    || (platform === 'instagram' ? extractInstagramId(url) : null)
+    || url;
+  return `${platform}:${videoId}`;
+}
+
 // ─── Universal dispatcher ─────────────────────────────────────────────────────
-export async function fetchStatsForVideo(video) {
+async function fetchStatsForVideoUncached(video) {
   const { platform, url, video_id } = video;
 
   if (platform === 'youtube') {
@@ -211,6 +225,19 @@ export async function fetchStatsForVideo(video) {
   }
 
   throw new Error(`Unknown platform: ${platform}`);
+}
+
+export async function fetchStatsForVideo(video) {
+  const key = statsFetchKey(video);
+  if (statsFetches.has(key)) return statsFetches.get(key);
+
+  const promise = fetchStatsForVideoUncached(video);
+  statsFetches.set(key, promise);
+  try {
+    return await promise;
+  } finally {
+    statsFetches.delete(key);
+  }
 }
 
 export function detectPlatform(url) {

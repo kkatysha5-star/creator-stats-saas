@@ -171,6 +171,18 @@ export async function initDB() {
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN trial_ends_at TEXT'); } catch {}
   try { await db.execute('ALTER TABLE workspaces ADD COLUMN public_id TEXT'); } catch {}
   try { await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS workspaces_public_id_idx ON workspaces(public_id)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS creators_workspace_id_idx ON creators(workspace_id)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS posts_workspace_published_idx ON posts(workspace_id, published_at)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS posts_workspace_creator_idx ON posts(workspace_id, creator_id)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS videos_workspace_published_idx ON videos(workspace_id, published_at)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS videos_workspace_creator_idx ON videos(workspace_id, creator_id)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS videos_post_id_idx ON videos(post_id)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS videos_workspace_platform_published_idx ON videos(workspace_id, platform, published_at)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS stats_snapshots_video_fetched_idx ON stats_snapshots(video_id, fetched_at)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS funnel_periods_workspace_creator_idx ON funnel_periods(workspace_id, creator_id)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS funnel_snapshots_period_recorded_idx ON funnel_snapshots(period_id, recorded_at)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS invites_workspace_id_idx ON invites(workspace_id)'); } catch {}
+  try { await db.execute('CREATE INDEX IF NOT EXISTS workspace_members_workspace_user_idx ON workspace_members(workspace_id, user_id)'); } catch {}
 
   // Ошибки парсинга
   try { await db.execute('ALTER TABLE videos ADD COLUMN last_error TEXT'); } catch {}

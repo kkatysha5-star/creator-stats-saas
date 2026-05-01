@@ -102,30 +102,53 @@ router.get('/periods', async (req, res) => {
 
     const periods = periodsResult.rows;
 
-    const result = await Promise.all(periods.map(async (p) => {
+    const periodIds = periods.map(p => p.id);
+    let snapshotsByPeriod = {};
+    let viewsByPeriod = {};
+
+    if (periodIds.length) {
+      const placeholders = periodIds.map(() => '?').join(',');
       const snapResult = await db.execute({
-        sql: 'SELECT * FROM funnel_snapshots WHERE period_id = ? ORDER BY recorded_at ASC',
-        args: [p.id]
+        sql: `SELECT * FROM funnel_snapshots
+              WHERE period_id IN (${placeholders})
+              ORDER BY period_id ASC, recorded_at ASC`,
+        args: periodIds
       });
 
-      const snapshots = snapResult.rows;
-      const latest = snapshots[snapshots.length - 1] || null;
+      snapshotsByPeriod = snapResult.rows.reduce((acc, snapshot) => {
+        const periodId = snapshot.period_id;
+        if (!acc[periodId]) acc[periodId] = [];
+        acc[periodId].push(snapshot);
+        return acc;
+      }, {});
 
       const viewsResult = await db.execute({
-        sql: `SELECT SUM(COALESCE(s.views, 0)) as total_views
-              FROM videos v
+        sql: `SELECT fp.id as period_id, SUM(COALESCE(s.views, 0)) as total_views
+              FROM funnel_periods fp
+              LEFT JOIN videos v
+                ON v.creator_id = fp.creator_id
+                AND v.published_at >= fp.date_from
+                AND (fp.date_to IS NULL OR v.published_at <= fp.date_to)
               LEFT JOIN (
                 SELECT video_id, views,
                        ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY fetched_at DESC) as rn
                 FROM stats_snapshots
               ) s ON s.video_id = v.id AND s.rn = 1
-              WHERE v.creator_id = ?
-                AND v.published_at >= ?
-                AND (? IS NULL OR v.published_at <= ?)`,
-        args: [p.creator_id, p.date_from, p.date_to, p.date_to]
+              WHERE fp.id IN (${placeholders})
+              GROUP BY fp.id`,
+        args: periodIds
       });
 
-      const totalViews = viewsResult.rows[0]?.total_views || 0;
+      viewsByPeriod = viewsResult.rows.reduce((acc, row) => {
+        acc[row.period_id] = row.total_views || 0;
+        return acc;
+      }, {});
+    }
+
+    const result = periods.map((p) => {
+      const snapshots = snapshotsByPeriod[p.id] || [];
+      const latest = snapshots[snapshots.length - 1] || null;
+      const totalViews = viewsByPeriod[p.id] || 0;
       const visits = latest?.visits || 0;
       const cart = latest?.cart || 0;
       const orders = latest?.orders || 0;
@@ -148,7 +171,7 @@ router.get('/periods', async (req, res) => {
         cpm, cac,
         snapshots,
       };
-    }));
+    });
 
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }

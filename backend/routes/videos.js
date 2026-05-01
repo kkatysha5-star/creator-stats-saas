@@ -5,6 +5,58 @@ import { requireAuth, requireActivePlan } from '../middleware/auth.js';
 import { invalidateVideoCache } from '../cron.js';
 
 const router = Router();
+const COOLDOWN_MS = 12 * 60 * 60 * 1000;
+const inProgress = globalThis.__videoRefreshInProgress || new Map();
+globalThis.__videoRefreshInProgress = inProgress;
+
+function parseFetchedAt(value) {
+  if (!value) return null;
+  const normalized = String(value).includes('T') ? String(value) : String(value).replace(' ', 'T') + 'Z';
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatCooldown(ms) {
+  const minutesLeft = Math.ceil(ms / 60000);
+  const hoursLeft = minutesLeft >= 60 ? Math.ceil(minutesLeft / 60) : null;
+  return hoursLeft ? `${hoursLeft} ч.` : `${minutesLeft} мин.`;
+}
+
+async function getCooldownRemaining(videoId) {
+  const result = await db.execute({
+    sql: 'SELECT fetched_at FROM stats_snapshots WHERE video_id = ? ORDER BY fetched_at DESC LIMIT 1',
+    args: [videoId],
+  });
+  const lastFetchedAt = parseFetchedAt(result.rows[0]?.fetched_at);
+  if (!lastFetchedAt) return 0;
+  return Math.max(0, COOLDOWN_MS - (Date.now() - lastFetchedAt.getTime()));
+}
+
+async function fetchStatsInBackground(video) {
+  try {
+    if (await getCooldownRemaining(video.id) > 0) return;
+    const stats = await fetchStatsForVideo(video);
+    const er = stats.views > 0 ? ((stats.likes + stats.comments + (stats.saves || 0)) / stats.views * 100) : 0;
+    await db.execute({
+      sql: 'INSERT INTO stats_snapshots (video_id, views, likes, comments, saves, shares, er) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      args: [video.id, stats.views, stats.likes, stats.comments, stats.saves, stats.shares, er]
+    });
+    if (stats.title) {
+      await db.execute({
+        sql: 'UPDATE videos SET title = COALESCE(title, ?), published_at = COALESCE(published_at, ?), last_error = NULL WHERE id = ?',
+        args: [stats.title, stats.published_at, video.id]
+      });
+    }
+  } catch (err) {
+    console.warn('Background stats fetch failed:', err.message);
+    try {
+      await db.execute({
+        sql: 'UPDATE videos SET last_error = ? WHERE id = ?',
+        args: [err.message, video.id]
+      });
+    } catch {}
+  }
+}
 
 router.get('/', async (req, res) => {
   try {
@@ -62,26 +114,6 @@ router.post('/', requireAuth, requireActivePlan, async (req, res) => {
 
     const videoRow = await db.execute({ sql: 'SELECT * FROM videos WHERE id = ?', args: [videoDbId] });
     const video = videoRow.rows[0];
-    try {
-      const stats = await fetchStatsForVideo(video);
-      const er = stats.views > 0 ? ((stats.likes + stats.comments + (stats.saves || 0)) / stats.views * 100) : 0;
-      await db.execute({
-        sql: 'INSERT INTO stats_snapshots (video_id, views, likes, comments, saves, shares, er) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        args: [videoDbId, stats.views, stats.likes, stats.comments, stats.saves, stats.shares, er]
-      });
-      if (stats.title) {
-        await db.execute({
-          sql: 'UPDATE videos SET title = COALESCE(title, ?), published_at = COALESCE(published_at, ?), last_error = NULL WHERE id = ?',
-          args: [stats.title, stats.published_at, videoDbId]
-        });
-      }
-    } catch (err) {
-      console.warn('Stats fetch failed:', err.message);
-      await db.execute({
-        sql: 'UPDATE videos SET last_error = ? WHERE id = ?',
-        args: [err.message, videoDbId]
-      });
-    }
 
     invalidateVideoCache();
     const final = await db.execute({
@@ -97,10 +129,12 @@ router.post('/', requireAuth, requireActivePlan, async (req, res) => {
       args: [videoDbId, videoDbId]
     });
     res.status(201).json(final.rows[0]);
+    fetchStatsInBackground(video);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/:id/refresh', requireAuth, requireActivePlan, async (req, res) => {
+  let lockedVideoId = null;
   try {
     const videoRow = await db.execute({ sql: 'SELECT * FROM videos WHERE id = ?', args: [req.params.id] });
     if (!videoRow.rows.length) return res.status(404).json({ error: 'Not found' });
@@ -112,6 +146,21 @@ router.post('/:id/refresh', requireAuth, requireActivePlan, async (req, res) => 
     if (video.workspace_id && String(video.workspace_id) !== String(wsId)) {
       return res.status(403).json({ error: 'Нет доступа к этому видео' });
     }
+
+    const videoId = Number(video.id);
+    const cooldownRemaining = await getCooldownRemaining(videoId);
+    if (cooldownRemaining > 0) {
+      return res.status(429).json({
+        error: `Обновить можно раз в 12 часов. Следующее обновление через ${formatCooldown(cooldownRemaining)}.`
+      });
+    }
+
+    if (inProgress.has(videoId)) {
+      return res.status(409).json({ error: 'Обновление уже выполняется' });
+    }
+
+    inProgress.set(videoId, true);
+    lockedVideoId = videoId;
 
     const stats = await fetchStatsForVideo(video);
     const er = stats.views > 0 ? ((stats.likes + stats.comments + (stats.saves || 0)) / stats.views * 100) : 0;
@@ -126,6 +175,8 @@ router.post('/:id/refresh', requireAuth, requireActivePlan, async (req, res) => 
       await db.execute({ sql: 'UPDATE videos SET last_error = ? WHERE id = ?', args: [e.message, req.params.id] });
     } catch {}
     res.status(500).json({ error: e.message });
+  } finally {
+    if (lockedVideoId != null) inProgress.delete(lockedVideoId);
   }
 });
 

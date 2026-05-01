@@ -85,6 +85,10 @@ export const api = {
     const q = new URLSearchParams(Object.entries(params).filter(([,v]) => v)).toString();
     return req('GET', `/stats/by-creator${q ? '?' + q : ''}`);
   },
+  getDashboard: (params = {}) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([,v]) => v)).toString();
+    return req('GET', `/stats/dashboard${q ? '?' + q : ''}`);
+  },
   refreshAll: () => req('POST', '/stats/refresh-all'),
 
   // Funnel

@@ -3,6 +3,41 @@ import { db } from '../db.js';
 import { fetchStatsForVideo, detectPlatform, extractVideoId } from '../fetchers.js';
 
 const router = Router();
+const COOLDOWN_MS = 12 * 60 * 60 * 1000;
+
+function parseFetchedAt(value) {
+  if (!value) return null;
+  const normalized = String(value).includes('T') ? String(value) : String(value).replace(' ', 'T') + 'Z';
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+async function hasFreshSnapshot(videoId) {
+  const result = await db.execute({
+    sql: 'SELECT fetched_at FROM stats_snapshots WHERE video_id = ? ORDER BY fetched_at DESC LIMIT 1',
+    args: [videoId],
+  });
+  const lastFetchedAt = parseFetchedAt(result.rows[0]?.fetched_at);
+  return Boolean(lastFetchedAt && Date.now() - lastFetchedAt.getTime() < COOLDOWN_MS);
+}
+
+async function fetchStatsInBackground(video, postId) {
+  try {
+    if (await hasFreshSnapshot(video.id)) return;
+    const stats = await fetchStatsForVideo(video);
+    const er = stats.views > 0 ? ((stats.likes + stats.comments + (stats.saves || 0)) / stats.views * 100) : 0;
+    await db.execute({ sql: 'INSERT INTO stats_snapshots (video_id, views, likes, comments, saves, shares, er) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [video.id, stats.views, stats.likes, stats.comments, stats.saves, stats.shares, er] });
+    if (stats.title) {
+      await db.execute({ sql: 'UPDATE posts SET title = COALESCE(title, ?), published_at = COALESCE(published_at, ?) WHERE id = ?', args: [stats.title, stats.published_at, postId] });
+      await db.execute({ sql: 'UPDATE videos SET title = ?, published_at = COALESCE(published_at, ?) WHERE id = ?', args: [stats.title, stats.published_at, video.id] });
+    }
+  } catch (e) {
+    console.warn('Background stats fetch failed:', e.message);
+    try {
+      await db.execute({ sql: 'UPDATE videos SET last_error = ? WHERE id = ?', args: [e.message, video.id] });
+    } catch {}
+  }
+}
 
 router.get('/', async (req, res) => {
   try {
@@ -46,7 +81,11 @@ router.get('/', async (req, res) => {
       return b.id - a.id;
     });
 
-    const result = await Promise.all(postsWithNum.map(async post => {
+    const postIds = postsWithNum.map(post => post.id);
+    let videosByPost = {};
+
+    if (postIds.length) {
+      const placeholders = postIds.map(() => '?').join(',');
       const videosResult = await db.execute({ sql: `
         SELECT v.*, s.views, s.likes, s.comments, s.saves, s.shares, s.er, s.fetched_at as stats_updated_at
         FROM videos v
@@ -55,10 +94,19 @@ router.get('/', async (req, res) => {
                  ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY fetched_at DESC) as rn
           FROM stats_snapshots
         ) s ON s.video_id = v.id AND s.rn = 1
-        WHERE v.post_id = ?
-      `, args: [post.id] });
+        WHERE v.post_id IN (${placeholders})
+      `, args: postIds });
 
-      const videos = videosResult.rows;
+      videosByPost = videosResult.rows.reduce((acc, video) => {
+        const postId = video.post_id;
+        if (!acc[postId]) acc[postId] = [];
+        acc[postId].push(video);
+        return acc;
+      }, {});
+    }
+
+    const result = postsWithNum.map(post => {
+      const videos = videosByPost[post.id] || [];
       const totals = videos.reduce((acc, v) => ({
         views: acc.views + (v.views || 0),
         likes: acc.likes + (v.likes || 0),
@@ -69,7 +117,7 @@ router.get('/', async (req, res) => {
 
       const avg_er = totals.views > 0 ? ((totals.likes + totals.comments + totals.saves) / totals.views * 100) : 0;
       return { ...post, videos, totals: { ...totals, avg_er } };
-    }));
+    });
 
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -102,18 +150,10 @@ router.post('/', async (req, res) => {
 
     const videoRow = await db.execute({ sql: 'SELECT * FROM videos WHERE id = ?', args: [videoDbId] });
     const video = videoRow.rows[0];
-    try {
-      const stats = await fetchStatsForVideo(video);
-      const er = stats.views > 0 ? ((stats.likes + stats.comments + (stats.saves || 0)) / stats.views * 100) : 0;
-      await db.execute({ sql: 'INSERT INTO stats_snapshots (video_id, views, likes, comments, saves, shares, er) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [videoDbId, stats.views, stats.likes, stats.comments, stats.saves, stats.shares, er] });
-      if (stats.title) {
-        await db.execute({ sql: 'UPDATE posts SET title = COALESCE(title, ?), published_at = COALESCE(published_at, ?) WHERE id = ?', args: [stats.title, stats.published_at, postId] });
-        await db.execute({ sql: 'UPDATE videos SET title = ?, published_at = COALESCE(published_at, ?) WHERE id = ?', args: [stats.title, stats.published_at, videoDbId] });
-      }
-    } catch (e) { console.warn('Stats fetch failed:', e.message); }
 
     const postRow = await db.execute({ sql: 'SELECT * FROM posts WHERE id = ?', args: [postId] });
     res.status(201).json(postRow.rows[0]);
+    fetchStatsInBackground(video, postId);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -142,18 +182,10 @@ router.post('/:id/videos', async (req, res) => {
 
     const videoRow = await db.execute({ sql: 'SELECT * FROM videos WHERE id = ?', args: [videoDbId] });
     const video = videoRow.rows[0];
-    try {
-      const stats = await fetchStatsForVideo(video);
-      const er = stats.views > 0 ? ((stats.likes + stats.comments + (stats.saves || 0)) / stats.views * 100) : 0;
-      await db.execute({ sql: 'INSERT INTO stats_snapshots (video_id, views, likes, comments, saves, shares, er) VALUES (?, ?, ?, ?, ?, ?, ?)', args: [videoDbId, stats.views, stats.likes, stats.comments, stats.saves, stats.shares, er] });
-      if (stats.title) {
-        await db.execute({ sql: 'UPDATE posts SET title = COALESCE(title, ?), published_at = COALESCE(published_at, ?) WHERE id = ?', args: [stats.title, stats.published_at, post.id] });
-        await db.execute({ sql: 'UPDATE videos SET title = ?, published_at = COALESCE(published_at, ?) WHERE id = ?', args: [stats.title, stats.published_at, videoDbId] });
-      }
-    } catch (e) { console.warn('Stats fetch failed:', e.message); }
 
     const final = await db.execute({ sql: 'SELECT * FROM videos WHERE id = ?', args: [videoDbId] });
     res.status(201).json(final.rows[0]);
+    fetchStatsInBackground(video, post.id);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

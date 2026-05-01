@@ -40,54 +40,43 @@ export default function Dashboard() {
       const dates = periodToDates(period, customFrom, customTo);
       const prevDates = getCompareDates(compareWith, period, customFrom, customTo, compareCustomFrom, compareCustomTo);
 
-      const requests = [
-        api.getSummary({ ...dates, platform: 'youtube' }),
-        api.getSummary({ ...dates, platform: 'tiktok' }),
-        api.getSummary({ ...dates, platform: 'instagram' }),
-        api.getByCreator({ ...dates }),
-      ];
-      if (prevDates) {
-        requests.push(
-          api.getSummary({ ...prevDates, platform: 'youtube' }),
-          api.getSummary({ ...prevDates, platform: 'tiktok' }),
-          api.getSummary({ ...prevDates, platform: 'instagram' }),
-          api.getByCreator({ ...prevDates }),
-        );
-      }
-      if (isPro) {
-        requests.push(api.getFunnelPeriods().catch(() => []));
-      }
-
-      const results = await Promise.all(requests);
-      const [ytRes, ttRes, igRes, crRes] = results;
-      setSummaryByPlat({
-        youtube: normalizeSummary(ytRes),
-        tiktok: normalizeSummary(ttRes),
-        instagram: normalizeSummary(igRes),
+      const data = await api.getDashboard({
+        ...dates,
+        compare_from: prevDates?.from,
+        compare_to: prevDates?.to,
+        include_funnel: isPro ? '1' : undefined,
       });
-      setByCreator(normalizeList(crRes));
+      const summary = data?.summaryByPlat || {};
+      setSummaryByPlat({
+        youtube: normalizeSummary(summary.youtube),
+        tiktok: normalizeSummary(summary.tiktok),
+        instagram: normalizeSummary(summary.instagram),
+      });
+      setByCreator(normalizeList(data?.byCreator));
 
       if (prevDates) {
-        const [,,, , pYt, pTt, pIg, pCr] = results;
+        const prevSummary = data?.prevSummaryByPlat || {};
         setPrevSummaryByPlat({
-          youtube: normalizeSummary(pYt),
-          tiktok: normalizeSummary(pTt),
-          instagram: normalizeSummary(pIg),
+          youtube: normalizeSummary(prevSummary.youtube),
+          tiktok: normalizeSummary(prevSummary.tiktok),
+          instagram: normalizeSummary(prevSummary.instagram),
         });
-        setPrevByCreator(normalizeList(pCr));
+        setPrevByCreator(normalizeList(data?.prevByCreator));
       } else {
         setPrevSummaryByPlat({});
         setPrevByCreator([]);
       }
 
       if (isPro) {
-        const periods = normalizeList(results[results.length - 1]);
+        const periods = normalizeList(data?.funnelPeriods);
         const map = {};
         periods.forEach(p => {
           const cid = p.creator_id;
           map[cid] = (map[cid] || 0) + (parseFloat(p.payout) || 0);
         });
         setFunnelPayouts(map);
+      } else {
+        setFunnelPayouts({});
       }
     } catch (e) {
       console.error(e);
